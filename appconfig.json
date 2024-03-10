@@ -1,0 +1,37 @@
+{
+    "port": 3000,
+    "odbcString": "DSN=Sports2000;UID=sysprogress;PWD=sysprogress",
+    "mongoDbUrl": "mongodb://0.0.0.0:27017",
+    "mongoDbName": "mshashDB",    
+    "sessionSecret": "secJKDFUret",
+    "authentication": {
+        "type": "azure ad",
+        "azureAd": {
+            "tenantId": "89218426-003e-4883-a0d3-445bcca6f8c6",
+            "clientId": "df4d1a32-7e0e-4ecf-84a2-1d42dfd6735b",
+            "clientSecret": "-sC8Q~V~ne_jZ3gTmrXC1mL.XDWLrQvS4yuSRbcx",
+            "graphMeEndpoint": "https://graph.microsoft.com/v1.0/me"
+        },
+        "static": 
+            [{
+                "username": "admin",
+                "password": "admin"
+            }, {
+                "username": "user",
+                "password": "user"
+            }]           
+        ,
+        "ldap": {
+            "url": "ldap://ldap.forumsys.com:389",
+            "baseDN": "dc=example,dc=com",
+            "username": "cn=read-only-admin,dc=example,dc=com",
+            "password": "password"
+        },
+        "database": {
+            "table": "user",
+            "usernameColumn": "username",
+            "passwordColumn": "password"
+        }
+
+    }
+}

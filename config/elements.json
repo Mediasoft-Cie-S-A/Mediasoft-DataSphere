@@ -1,0 +1,114 @@
+{
+    "BarChart": {
+        "type": "BarChart",
+        "description": "Bar Chart",
+        "category": "Charts",
+        "scriptName": "chart.js",
+        "createFunction": "createElementChart",
+        "editFunction": "editElementChart",
+        "styles": "chart.css",
+        "image": "img/bar-graph.png"
+    },
+    "LineChart": {
+        "type": "LineChart",
+        "description": "Line Chart",
+        "category": "Charts",
+        "scriptName": "chart.js",
+        "createFunction": "createElementChart",
+        "editFunction": "editElementChart",
+        "styles": "chart.css",
+        "image": "img/line-chart.png"
+    },
+    "PieChart": {
+        "type": "PieChart",
+        "description": "Pie Chart",
+        "category": "Charts",
+        "scriptName": "chart.js",
+        "createFunction": "createElementChart",
+        "editFunction": "editElementChart",
+        "styles": "chart.css",
+        "image": "img/pie-chart.png"
+    },
+    "scatterChart": {
+        "type": "scatterChart",
+        "description": "Scatter Chart",
+        "category": "Charts",
+        "scriptName": "chart.js",
+        "createFunction": "createElementChart",
+        "editFunction": "editElementChart",
+        "styles": "chart.css",
+        "image": "img/scatter.png"
+    },
+    "bubbleChart": {
+        "type": "bubbleChart",
+        "description": "Bubble Chart",
+        "category": "Charts",
+        "scriptName": "chart.js",
+        "createFunction": "createElementChart",
+        "editFunction": "editElementChart",
+        "styles": "chart.css",
+        "image": "img/bubble.png"
+    },
+    "radarChart": {
+        "type": "radarChart",
+        "description": "Radar Chart",
+        "category": "Charts",
+        "scriptName": "chart.js",
+        "createFunction": "createElementChart",
+        "editFunction": "editElementChart",
+        "styles": "chart.css",
+        "image": "img/radar.png"
+    },
+    "polarAreaChart": {
+        "type": "polarAreaChart",
+        "description": "Polar Area Chart",
+        "category": "Charts",
+        "scriptName": "chart.js",
+        "createFunction": "createElementChart",
+        "editFunction": "editElementChart",
+        "styles": "chart.css",
+        "image": "img/spider.png"
+    },
+    "doughnutChart": {
+        "type": "doughnutChart",
+        "description": "Doughnut Chart",
+        "category": "Charts",
+        "scriptName": "chart.js",
+        "createFunction": "createElementChart",
+        "editFunction": "editElementChart",
+        "styles": "chart.css",
+        "image": "img/donut-chart.png"
+    },
+    "grid": {
+        "type": "grid",
+        "description": "Grid",
+        "category": "Data",
+        "scriptName": "grid.js",
+        "createFunction": "createElementGrid",
+        "editFunction": "editElementGrid",
+        "styles": "chart.css",
+        "image": "img/grid.png"
+    },
+    "htmlgrid": {
+        "type": "htmlgrid",
+        "description": "HTML Grid",
+        "category": "HTML",
+        "scriptName": "htmlGridInput.js",
+        "createFunction": "showHtmlGridModal",
+        "editFunction": "editGridElement",
+        "styles": "htmlGrid.css",
+        "image": "img/split.png"
+    },
+    "python": {
+        "type": "python",
+        "description": "Python dataset",
+        "category": "HTML",
+        "scriptName": "python.js",
+        "createFunction": "createPython",
+        "editFunction": "editPython",
+        "styles": "python.css",
+        "image": "img/python.png"
+    }
+    
+
+}
