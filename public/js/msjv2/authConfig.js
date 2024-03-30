@@ -3,7 +3,7 @@
  * For a full list of MSAL.js configuration parameters, visit:
  * https://github.com/AzureAD/microsoft-authentication-library-for-js/blob/dev/lib/msal-browser/docs/configuration.md 
  */
-const msalConfig = {
+var msalConfig = {
     auth: {
         // 'Application (client) ID' of app registration in Azure portal - this value is a GUID
         clientId: "8ceb09f3-fdc2-4a87-b5e6-067a7db86482",

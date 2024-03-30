@@ -37,8 +37,11 @@ function editElementGrid(type,element,content)
     };
     content.appendChild(button);
     content.appendChild(createMultiSelectItem("Data", "data", "data",element.getAttribute('data'),"text",true));
-
-    content.appendChild(createSelectItem("Filter", "filter", "filter",element.getAttribute('filter'),"text",true));  
+    filter= createFilterBox(content);
+    content.appendChild(filter);
+       // Initialize with the standard view
+       switchView(event,content,'standard');
+       regenerateFilters(content,JSON.parse(element.getAttribute("filter")));
 
 }
 

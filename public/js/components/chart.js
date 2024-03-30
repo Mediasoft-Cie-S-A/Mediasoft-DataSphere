@@ -1,4 +1,5 @@
 const { compareSync } = require("bcryptjs");
+const { text } = require("body-parser");
 
 /*
  * Copyright (c) 2023 Mediasoft & Cie S.A.
@@ -86,8 +87,8 @@ function editElementChart(type,element,content)
     content.appendChild(button);
     var data=createMultiSelectItem("Data", "data", "data",element.getAttribute('data'),"text",true);   
     var legend=createSelectItem("Legend", "legend", "legend",element.getAttribute('legend'),"text",true);
-    var filter=createSelectItem("Filter", "filter", "filter",element.getAttribute('filter'),"text",true);  
-   
+   // var filter=createSelectItem("Filter", "filter", "filter",element.getAttribute('filter'),"text",true);  
+    filter= createFilterBox(content);
     content.appendChild(data);
     content.appendChild(legend);
     content.appendChild(filter);
@@ -113,7 +114,9 @@ function editElementChart(type,element,content)
     // select the functionName
     legendSelect.value=element.getAttribute("labels-data-function");
 
-
+       // Initialize with the standard view
+     switchView(event,content,'standard');
+     regenerateFilters(content,JSON.parse(element.getAttribute("filter")));
 }
 
 // clear the charts
@@ -162,6 +165,268 @@ function getChart(){
                   var chart=chartList[ chartNumber];
                   return chart;
 }
+
+// create filter box
+
+    
+// Function to initialize the filter box
+function createFilterBox(main) {
+    var div = document.createElement("div");
+    div.id = 'filterBox';
+    var lbl = document.createElement("label");
+    lbl.setAttribute("for", div.id);
+    lbl.textContent = "Filter:";
+    div.appendChild(lbl);
+    // clear button for the filter with icon 
+    var clearButton = document.createElement("button");
+    clearButton.innerHTML = '<i class="fa fa-trash"></i>';
+    clearButton.onclick = function() {
+        // delete attribute filter of the element
+        const chart = document.getElementById(main.getAttribute("elementId"));
+        chart.removeAttribute("filter");
+        // clear the filter box
+        const filterBox = main.querySelector('#filterBoxContainer');
+        filterBox.innerHTML = '';
+        // apply switchview with current value of select
+        const viewSelect = main.querySelector('#viewSelect');
+        switchView(event, main, viewSelect.value);
+    };
+    div.appendChild(clearButton);
+    // Create container for the filter box
+    const filterBoxContainer = document.createElement('div');
+    filterBoxContainer.id = 'filterBoxContainer';
+  
+    // Create the view select dropdown
+    const viewSelect = document.createElement('select');
+    viewSelect.id = 'viewSelect';
+    // Add options
+    ['standard', 'advanced'].forEach(view => {
+        const option = new Option(view, view);
+        console.log(option);
+        viewSelect.options.add(option);
+    });
+  
+    // Append the view select to the container
+    div.appendChild(viewSelect);
+  
+    // Event listener for changing views
+    viewSelect.addEventListener('change', function() {
+      switchView(event, main,this.value);
+    });
+    div.appendChild(filterBoxContainer);
+     // create button apply filter
+     // Create a button for generating JSON
+    const generateJsonBtn = document.createElement('button');
+    generateJsonBtn.textContent = 'Apply';
+    generateJsonBtn.setAttribute("onclick","generateJson(event,'"+ main.id +"')");
+    filterBoxContainer.appendChild(generateJsonBtn);
+   
+    div.appendChild(generateJsonBtn);
+    return div;
+  }
+  
+  // Function to switch views
+  function switchView(event,main,view) {
+    event.preventDefault();
+    const container = main.querySelector('#filterBoxContainer');
+  
+    // Clear previous content except the view select
+    container.querySelectorAll(':not(#viewSelect)').forEach(el => el.remove());
+    const textField = document.createElement('input');
+    textField.placeholder = 'Field';
+    textField.name = 'field';
+    textField.setAttribute('ObjectType','filters');
+    textField.setAttribute('ondragover', 'allowDrop(event)');
+    textField.setAttribute('ondrop', 'dropInput(event)');
+    if (view === 'standard') {
+      // Standard view elements
+     
+      textField.addEventListener('input', function(event) {
+        // get query attribute
+        const query= this.getAttribute('query');
+        // execute query
+        const url = '/query/'+query;
+        console.log('url:', url);
+        fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);
+            // get distinct value by field
+            const values = distinct(data,this.value);
+            console.log(values);
+            // get the select
+            const multiSelect = document.querySelector('#filterBoxContainer select:not(#viewSelect)');
+            // empty the select
+            multiSelect.innerHTML = '';
+            // create the options
+            values.forEach(value => {
+                var opt = document.createElement('option');
+                opt.value = value;
+                opt.innerHTML = value;
+                multiSelect.appendChild(opt);
+            });
+
+            // check if json filter exists
+            const chart = document.getElementById(main.getAttribute("elementId"));
+            if (chart.getAttribute("filter"))
+            {
+                // get the json
+                var filterConfig=JSON.parse(chart.getAttribute("filter"));
+                // get the filter
+                var filter=filterConfig.filters[0];
+                filter.values.forEach(val => {
+                    for (let option of multiSelect.options) {
+                    if (option.value === val) option.selected = true;
+                    }
+                });
+            }
+        });
+    // get the object by id      
+      });
+      const multiSelect = document.createElement('select');
+      multiSelect.multiple = true;
+      // Example options - replace with your actual options  
+   
+  
+      // Append standard view elements
+      container.appendChild(textField);
+      container.appendChild(multiSelect);
+    } else if (view === 'advanced') {
+      // Advanced view elements
+    
+      const operatorSelect = document.createElement('select');
+      // Example operators - replace with your actual options
+      ['=', '!=', '<', '>', '>=', '<='].forEach(op => {
+        const option = new Option(op, op);
+        operatorSelect.options.add(option);
+      });
+  
+      const valueInput = document.createElement('input');
+      valueInput.placeholder = 'Value';
+  
+      // Append advanced view elements
+      container.appendChild(textField);
+      container.appendChild(operatorSelect);
+      container.appendChild(valueInput);
+    }
+  }
+  
+  // Function to collect data and generate JSON
+function generateJson(event, mainId) {
+    event.preventDefault();
+    console.log("generateJson");
+    console.log(mainId);
+    const main =document.getElementById(mainId);
+    const viewSelect = main.querySelector('#viewSelect');
+    if (!viewSelect) return;
+    const view = viewSelect.options[viewSelect.selectedIndex].value;
+    let filterInfo = { view: view, filters: [] };
+    const fieldInput = document.querySelector('#filterBoxContainer input[name="field"]');
+    const dataType=fieldInput.getAttribute('dataType');
+
+
+    if (view === 'standard') {
+      
+      const multiSelect = document.querySelector('#filterBoxContainer select:not(#viewSelect)');
+      const selectedOptions = Array.from(multiSelect.selectedOptions).map(option => option.value);
+      var filterValues=[];
+      switch (dataType) {
+        case 'string':
+            selectedOptions.forEach(option => {
+                filterValues.push(option);
+            });
+            break;
+        case 'number':
+            selectedOptions.forEach(option => {
+                filterValues.push(parseFloat(option));
+            });
+            break;
+        case 'date':
+            selectedOptions.forEach(option => {
+                filterValues.push(new Date(option));
+            });
+            break;
+    }
+
+
+      filterInfo.filters.push({
+        field: fieldInput.value,
+        query: fieldInput.getAttribute('query'),
+        type: fieldInput.getAttribute('dataType'),
+        operator: '',
+        value: '',
+        values: filterValues
+      });
+    } else if (view === 'advanced') {
+      
+      const operatorSelect = document.querySelector('#filterBoxContainer select:not(#viewSelect)');
+      const valueInput = document.querySelector('#filterBoxContainer input[placeholder="Value"]');
+      var value = null;
+      switch(dataType)
+        {
+            case 'string':
+                value=valueInput.value;
+                break;
+            case 'number':
+                value=parseFloat(valueInput.value);
+                break;
+            case 'date':
+                value=new Date(valueInput.value);
+                break;
+        }
+      filterInfo.filters.push({
+        field: fieldInput.value,
+        query: fieldInput.getAttribute('query'),
+        type: fieldInput.getAttribute('dataType'),
+        operator: operatorSelect.value,
+        value: value,
+        values: []
+      });
+    }
+    const chart = document.getElementById(main.getAttribute("elementId"));
+        // Display the JSON for demonstration purposes
+        console.log(JSON.stringify(filterInfo));
+
+    chart.setAttribute("filter",JSON.stringify(filterInfo));
+  
+    // Here you could also send the JSON to a server, save it, or use it in some other way
+    // For example:
+    // fetch('/api/filters', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(filterInfo) });
+  }
+
+  // Function to regenerate filters from JSON
+function regenerateFilters(content,filterConfig) {
+    
+    switchView(event, content, filterConfig.view); // Ensure the correct view is set
+    if ( filterConfig.filters.length > 0)
+    {
+        const filter = filterConfig.filters[0]; // Assuming single filter for simplicity
+
+        const textField = content.querySelector('#filterBoxContainer input[name="field"]');
+        textField.value = filter.field;
+        textField.setAttribute('query', filter.query);
+        textField.setAttribute('dataType', filter.type);
+
+        if (filterConfig.view === 'standard' ) {
+        const filter = filterConfig.filters[0]; // Assuming single filter for simplicity      
+        
+        const multiSelect = content.querySelector('#filterBoxContainer select:not(#viewSelect)');
+        textField.dispatchEvent(new Event('input'));
+
+      
+        } else if (view === 'advanced' ) {
+            content.querySelector('#filterBoxContainer select:not(#viewSelect)').value = filter.operator;
+            content.querySelector('#filterBoxContainer input[placeholder="Value"]').value = filter.value;
+            textField.dispatchEvent(new Event('input'));
+
+        }
+
+    
+        }
+  }
+  
+
+  
 
 function createSelectItem(id, label, styleProperty,text,type,attribute)
  {
@@ -336,13 +601,87 @@ function renderData(element) {
     var fieldsElaborated=[]; 
     chart.data.datasets=[];
     var query=element.getAttribute("query");
-    console.log("query:"+query);
+  //  console.log("query:"+query);
     var url = '/query/'+query;
-    console.log('url:', url);
+  //  console.log('url:', url);
     fetch(url)
     .then(response => response.json())
     .then(data => {
-      
+            
+                // get filter information from the element
+                
+                if (element.getAttribute("filter"))
+                {
+                    var filter=JSON.parse(element.getAttribute("filter"));
+                    // if filter is not empty
+
+                    console.log("filter:"+filter);
+                    // get the filter view
+                    var view=filter.view;
+                    // if the filter is standard get the filter values
+                    if (view==='standard')
+                    {
+                        filter.filters.forEach(filterElement => {
+                            // get the field
+                            var field=filterElement.field;
+                            // get the values
+                            var values=filterElement.values;
+                            // filter the data
+                            data=data.filter(function (element) {
+                               
+                                return values.indexOf(element[field])>-1;
+                            });
+                        });
+                    }
+                    if (view==='advanced')
+                    {
+                        filter.filters.forEach(filterElement => {
+                            // get the field
+                            var field=filterElement.field;
+                            // get the values
+                            var operator=filterElement.operator;
+                            var value=filterElement.value;
+                                     // filter the data     
+                                     switch (operator) {
+                                        case '=':
+                                            data=data.filter(function (element) {
+                                            return element[field]===value;
+                                        });
+                                        break;
+                                        case '!=':
+                                            data=data.filter(function (element) {
+                                            return element[field]!==value;
+                                        });
+                                        break;
+                                        case '<':
+                                            data=data.filter(function (element) {
+                                            return element[field]<value;
+                                        }); 
+                                        break;
+                                        case '>':
+                                            data=data.filter(function (element) {
+                                            return element[field]>value;
+                                        });
+                                        break;
+                                        case '<=':
+                                            data=data.filter(function (element) {
+                                            return element[field]<=value;
+                                        });
+                                        break;
+                                        case '>=':
+                                            data=data.filter(function (element) {
+                                            return element[field]>=value;
+                                        });
+                                        break;
+    
+                                    }                     
+                               
+                            });
+                        }
+                        
+                    
+                }// if filter
+                console.log(data);
                // get config
                 var dataConfig=JSON.parse(element.getAttribute("dataConfig"));
                 var i=0;    

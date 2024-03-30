@@ -1,9 +1,3 @@
-// Create the main myMSALObj instance
-// configuration parameters are located at authConfig.js
-const myMSALObj = new msal.PublicClientApplication(msalConfig);
-
-let username = "";
-
 /**
  * A promise handler needs to be registered for handling the
  * response returned from redirect flow. For more information, visit:

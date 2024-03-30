@@ -93,6 +93,8 @@ function editElement(element) {
         var dialog= document.getElementById("propertiesBar");
  	dialog.style.display = 'block';         
         var content= dialog.querySelector("div");
+        content.id="propertiesContent"+type;
+        content.setAttribute("elementId",element.id);
 	  content.innerHTML="";
         // adding icon close to the dialog
         var closeIcon = document.createElement("i");
@@ -348,6 +350,12 @@ function dropInput(event) {
               // get the field type
                
                 addFieldToPropertiesBar(event.target,field,type,"value");
+            break;
+            case "filters":
+                // generate the input element
+                // get the field type
+                event.target.value=field;
+                
             break;
 
         }
