@@ -310,12 +310,14 @@ function dropInput(event) {
     // get the element source 
     var element = document.getElementById(elementId);
     var type=element.getAttribute("dataType");
-    var query=element.getAttribute("query");
+  //  var query=element.getAttribute("query");
+    var dataset=element.getAttribute("data-table-name");
    // console.log("type:"+type);
    // console.log("query:"+query);
     // set the type and query in the destination element
     event.target.setAttribute("dataType",type);
-    event.target.setAttribute("query",query);
+  //  event.target.setAttribute("query",query);
+    event.target.setAttribute("dataSet",dataset);
     // split the elementId to get the table name and field name
     
     const elements=elementId.split(".");

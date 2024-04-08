@@ -632,8 +632,50 @@ function saveDataset()
             console.error('Error:', error);
         });
 
-        
+        updateDataset(ds);
     }
+}
+
+// update Data of dataset in the database with '/storeDataset' endpoint
+function updateDataset(ds)
+{
+    // update the query
+    const url = '/query/'+ds.query;
+    console.log('url:', url);
+    fetch(url)
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);
+       // store the dataset with storeDatasetData
+       const datasetDataPost = {
+        datasetName: ds.datasetName,
+        data: data,
+        userCreated: 'internal',
+        userModified: 'internal',
+        modificationDate: new Date(),
+        creationDate: new Date()
+       }
+         console.log('datasetDataPost:', datasetDataPost);
+        // post the dataset to the server with '/storeDatasetData' endpoint
+        fetch('/storeDatasetData', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(datasetDataPost)
+        }).then(response => response.json())
+        .then(data => {
+            console.log('data:', data);
+            showToast('Success:'+data.message, 5000); // Show toast for 5 seconds
+        })
+        .catch((error) => {
+            showToast('Error! ' + error, 5000); // Show toast for 5 seconds
+            console.error('Error:', error);
+        });
+
+      
+    })
+    .catch(error => console.error('Error:', error));
 }
 
 function createTableList(list,datasets) {
@@ -695,6 +737,7 @@ function createTableList(list,datasets) {
                         newColumn.classList.add('draggable');
                         newColumn.setAttribute("dataType",types[index]);
                         newColumn.setAttribute("query",query);
+                        newColumn.setAttribute('data-table-name', tableName);
                         event.target.appendChild(newColumn);
                         }
                     });

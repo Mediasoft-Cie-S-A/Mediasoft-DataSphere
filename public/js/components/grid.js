@@ -145,7 +145,7 @@ function updateGridData(main) {
   
      var gridDatasets=[];
      var labels=[];
-     query = dataInput.getAttribute("query");
+     query = dataInput.getAttribute("dataSet");
      console.log("query:"+query);
      var url = '/query/'+query;
      console.log('url:', url);

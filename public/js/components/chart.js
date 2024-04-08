@@ -1,6 +1,3 @@
-const { compareSync } = require("bcryptjs");
-const { text } = require("body-parser");
-
 /*
  * Copyright (c) 2023 Mediasoft & Cie S.A.
  *
@@ -103,7 +100,7 @@ function editElementChart(type,element,content)
     // get lendend input
     const legendInput=legend.querySelector('input');
     legendInput.value=element.getAttribute('labels-data-field');
-    legendInput.setAttribute("query",element.getAttribute('query'));
+    legendInput.setAttribute("dataSet",element.getAttribute('dataSet'));
     legendInput.setAttribute("datatype",element.getAttribute('labels-data-type'));
     // create legend based on the dataConfig    
     const legendSelect=legend.querySelector('select');
@@ -243,23 +240,20 @@ function createFilterBox(main) {
      
       textField.addEventListener('input', function(event) {
         // get query attribute
-        const query= this.getAttribute('query');
-        // execute query
-        const url = '/query/'+query;
+        const dataset= this.getAttribute('dataSet');
+        // create the url for /getDatasetDataDistinct/:datasetName/:field
+        const url = '/getDatasetDataDistinct/'+dataset+'/'+this.value;
+    
         console.log('url:', url);
         fetch(url)
         .then(response => response.json())
         .then(data => {
             console.log(data);
-            // get distinct value by field
-            const values = distinct(data,this.value);
-            console.log(values);
-            // get the select
             const multiSelect = document.querySelector('#filterBoxContainer select:not(#viewSelect)');
             // empty the select
             multiSelect.innerHTML = '';
             // create the options
-            values.forEach(value => {
+            data.forEach(value => {
                 var opt = document.createElement('option');
                 opt.value = value;
                 opt.innerHTML = value;
@@ -351,7 +345,7 @@ function generateJson(event, mainId) {
 
       filterInfo.filters.push({
         field: fieldInput.value,
-        query: fieldInput.getAttribute('query'),
+        dataset: fieldInput.getAttribute('dataSet'),
         type: fieldInput.getAttribute('dataType'),
         operator: '',
         value: '',
@@ -376,7 +370,7 @@ function generateJson(event, mainId) {
         }
       filterInfo.filters.push({
         field: fieldInput.value,
-        query: fieldInput.getAttribute('query'),
+        dataset: fieldInput.getAttribute('dataSet'),
         type: fieldInput.getAttribute('dataType'),
         operator: operatorSelect.value,
         value: value,
@@ -400,13 +394,14 @@ function regenerateFilters(content,filterConfig) {
     switchView(event, content, filterConfig.view); // Ensure the correct view is set
     if ( filterConfig.filters.length > 0)
     {
+       // console.log(filterConfig);
         const filter = filterConfig.filters[0]; // Assuming single filter for simplicity
 
         const textField = content.querySelector('#filterBoxContainer input[name="field"]');
         textField.value = filter.field;
-        textField.setAttribute('query', filter.query);
+  
         textField.setAttribute('dataType', filter.type);
-
+        textField.setAttribute('dataSet', filter.dataset);
         if (filterConfig.view === 'standard' ) {
         const filter = filterConfig.filters[0]; // Assuming single filter for simplicity      
         
@@ -557,7 +552,7 @@ function updateChartData() {
     const legend=propertiesBar.querySelector('#Legend');
     const legendInput=legend.querySelector('input');    
     const legendField=legendInput.value;
-    const  query = legendInput.getAttribute("query");
+    const  dataSet = legendInput.getAttribute("dataSet");
     const legendType=legendInput.getAttribute("datatype");
     const legendSelect=legend.querySelector('select');
     const legendfunction=legendSelect.options[legendSelect.selectedIndex].value;
@@ -566,7 +561,7 @@ function updateChartData() {
     currentChart.setAttribute("labels-data-function",legendfunction);
     currentChart.setAttribute("labels-data-type",legendType);   
    
-    currentChart.setAttribute("query",query);
+    currentChart.setAttribute("dataSet",dataSet);
     var dataSelect=dataInput.querySelectorAll('div');
    
     // generate array of data
@@ -600,171 +595,148 @@ function renderData(element) {
        // get parent of the dataInput
     var fieldsElaborated=[]; 
     chart.data.datasets=[];
-    var query=element.getAttribute("query");
-  //  console.log("query:"+query);
-    var url = '/query/'+query;
-  //  console.log('url:', url);
-    fetch(url)
-    .then(response => response.json())
-    .then(data => {
-            
-                // get filter information from the element
-                
-                if (element.getAttribute("filter"))
-                {
-                    var filter=JSON.parse(element.getAttribute("filter"));
-                    // if filter is not empty
-
-                    console.log("filter:"+filter);
-                    // get the filter view
-                    var view=filter.view;
-                    // if the filter is standard get the filter values
-                    if (view==='standard')
-                    {
-                        filter.filters.forEach(filterElement => {
-                            // get the field
-                            var field=filterElement.field;
-                            // get the values
-                            var values=filterElement.values;
-                            // filter the data
-                            data=data.filter(function (element) {
-                               
-                                return values.indexOf(element[field])>-1;
-                            });
-                        });
-                    }
-                    if (view==='advanced')
-                    {
-                        filter.filters.forEach(filterElement => {
-                            // get the field
-                            var field=filterElement.field;
-                            // get the values
-                            var operator=filterElement.operator;
-                            var value=filterElement.value;
-                                     // filter the data     
-                                     switch (operator) {
-                                        case '=':
-                                            data=data.filter(function (element) {
-                                            return element[field]===value;
-                                        });
-                                        break;
-                                        case '!=':
-                                            data=data.filter(function (element) {
-                                            return element[field]!==value;
-                                        });
-                                        break;
-                                        case '<':
-                                            data=data.filter(function (element) {
-                                            return element[field]<value;
-                                        }); 
-                                        break;
-                                        case '>':
-                                            data=data.filter(function (element) {
-                                            return element[field]>value;
-                                        });
-                                        break;
-                                        case '<=':
-                                            data=data.filter(function (element) {
-                                            return element[field]<=value;
-                                        });
-                                        break;
-                                        case '>=':
-                                            data=data.filter(function (element) {
-                                            return element[field]>=value;
-                                        });
-                                        break;
+  
+  
     
-                                    }                     
-                               
-                            });
-                        }
-                        
+    var dataConfig=JSON.parse(element.getAttribute("dataConfig"));
+    
                     
-                }// if filter
-                console.log(data);
                // get config
-                var dataConfig=JSON.parse(element.getAttribute("dataConfig"));
-                var i=0;    
-                dataConfig.forEach(config => {
-              
+                
+               
+                for (index=0;index<dataConfig.length;index++)
+                {
+                   console.log(index);
+                    var config=dataConfig[index];
+                    console.log(config);
                     var functionName=config.functionName;
                     console.log("functionName:"+functionName);
 
                     var fieldName=config.fieldName;
                     console.log("fieldName:"+fieldName);
-                    // get the data
+                    // prepare the dataset
                     
-                    // if function is value
                     
-                        
+                    // get the dataset data from the server, using the filter
 
-                    columnData=getDataByFunction(data,fieldName,functionName,labelName);
-                   // clear the chart datasets
-                     //console.log("data"+columnData);
-                     
-              
-                        if (!chart.data.datasets[i])
-                        {
-                            chart.data.datasets[i]={data:[]};
-                        }
-                        else
-                        {
-                            chart.data.datasets[i].data=[];
-                            
-                        }
-                        chart.data.datasets[i].label=fieldName;
-                       chart.data.datasets[i].backgroundColor=chartColors[i];
-                        chart.data.datasets[i].borderColor=chartBorderColors[i];
-                        chart.data.datasets[i].borderWidth=1;
-                        if (fieldsElaborated.indexOf(fieldName)>-1)
-                        {
-                            console.log("fieldsElaborated.indexOf(fieldName):"+fieldsElaborated.indexOf(fieldName));
-                            console.log(chart.config.type);
-                            console.log(chart);
-                            switch (chart.config.type)
-                            {
-                                case 'bar':
-                                    console.log("bar");
-                                    chart.data.datasets[i].type='line';
-                                break;
-                                case 'line':
-                                    chart.data.datasets[i].type='bar';
-                                break;
-                            }
-                            
-                        }
-                        else
-                        {
-                            fieldsElaborated.push(fieldName);
-                        }
-                    
-                        chart.data.datasets[i].data=columnData;
-                        if (i===0)
-                            {
-                                if (functionName==='value')
-                                {
-                                    chart.data.labels=[];
-                                    data.forEach(element => {
-                                        chart.data.labels.push(element[labelName]);
-                                    });
-                                }
-                                else
-                                {
-                                    
-                                    chart.data.labels=distinct(data,labelName);
-                                }
-                        }
-                    
-                    i++;
-                });
-            chart.update();
-
+                    var url = getFilterUrl(element);
+                   url+="&groups="+labelName+"&agg="+fieldName+"&funct="+functionName;
+                   if (!chart.data.datasets[index])
+                   {
+                       chart.data.datasets[index]={data:[]};
+                   }
+                   else
+                   {
+                       chart.data.datasets[index].data=[];
+                       
+                   }
+                   chart.data.datasets[index].label=fieldName;
+                   chart.data.datasets[index].backgroundColor=chartColors[index];
+                   chart.data.datasets[index].borderColor=chartBorderColors[index];
+                   chart.data.datasets[index].borderWidth=1;
+                   if (fieldsElaborated.indexOf(fieldName)>-1)
+                   {
+                      
+                       switch (chart.config.type)
+                       {
+                           case 'bar':
+                                chart.data.datasets[index].type='line';
+                           break;
+                           case 'line':
+                               chart.data.datasets[index].type='bar';
+                           break;
+                       }
+                       
+                   }
+                   else
+                   {
+                       fieldsElaborated.push(fieldName);
+                   }
                
+                   
+                   const request = new XMLHttpRequest();
+                    request.open("GET", url, false); // `false` makes the request synchronous
+                    request.send(null);
+                   
+                    if (request.status === 200) {
+                     querydata = request.responseText;
+                    }
 
-    });              
-    
+                   const data=JSON.parse(querydata);
+                   
+                        // assign the data to the chart only the fields name
+                        const columnData=[];
+                        const columnLabels=[];
+                        var labelFiled=functionName==='value'?labelName:'_id';
+                      
+                        data.forEach(element => {
+                            columnData.push(element[fieldName]);
+                            columnLabels.push(element[labelFiled]);                           
+                        });
+                        
+                        chart.data.datasets[index].data=columnData;                       
+                        chart.data.labels=columnLabels;
+                        console.log("columnData:"+chart.data.datasets[index].data   );           
+                        console.log("columnLabels:"+chart.data.labels);
+                       
+              
+            }// for(index=0;index<dataConfig.length;index++)
+    chart.update();
+          
+}
 
+// get the filter url   
+function getFilterUrl(element)
+{
+    var url = '/getDatasetDataByFilter?datasetName='+element.getAttribute("dataSet");
+                        
+    var field="";
+    var values="";
+    if (element.getAttribute("filter"))
+    {
+        var filter=JSON.parse(element.getAttribute("filter"));
+        // if filter is not empty
 
+        console.log("filter:"+filter);
+        // get the filter view
+        var view=filter.view;
+        // if the filter is standard get the filter values
+        if (view==='standard')
+        {
+            for (i=0;i<filter.filters.length;i++)
+            {
+                field+=filter.filters[i].field;
+                
+                for(l=0;l<filter.filters[i].values.length;l++)
+                {
+                    values+=filter.filters[i].values[l];
+                    if (l<filter.filters[i].values.length-1)
+                    {
+                        values+=",";
+                    }
+                }
+                if (i<filter.filters.length-1)
+                {
+                    field+=",";
+                    values+=";";
+                }
+            }
+        }
+        if (view==='advanced')
+        {
+            /*  filter.filters.forEach(filterElement => {
+                dymaicFilter.push({field:filterElement.field,operator:filterElement.operator,value:filterElement.value});   
+                });*/
+        }
+            
+        if (field!=="" && values!=="" && field!==null && values!==null && field!==undefined && values!==undefined)
+        {
+        // create query string with the filter datasetName=Dataset1&fields=HealthCare&value=Aetna PP,HMO/PPO
+        url+="&fields="+field+"&value="+values ;
+        
+        }
+    }// if filter
+    return url;
 }
 
 function getDataByFunction(data,fieldName,lfunction,labelName)

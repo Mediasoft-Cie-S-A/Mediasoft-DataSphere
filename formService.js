@@ -146,7 +146,7 @@ module.exports = function(app, client, dbName) {
     // POST endpoint to store data
 app.post('/storeDataset', async (req, res) => {
      try {
-        await client.connect();
+         client.connect();
          const db = client.db(dbName);
         const collection = db.collection('datasets');
 
@@ -175,30 +175,57 @@ app.post('/storeDataset', async (req, res) => {
              result = await collection.insertOne(dataset);
              res.send({ message: 'Dataset stored successfully', _id: result.insertedId });
         }     
-        
+      
     } catch (err) {
+        console.log(err.stack);
         res.status(500).send("Error storing data: " + err.message);
+    } 
+    finally {
+        await client.close();
+    }
+});
+
+//store data of dataset
+
+app.post('/storeDatasetData', async (req, res) => {
+
+    try {
+        await client.connect();
+        const db = client.db(dbName);
+        if (!req.body.datasetName || !req.body.data) {
+            return res.status(400).send({ error: 'Missing required parameters' });
+        }
+        const collection = db.collection(req.body.datasetName);
+        collection.drop();
+       
+       // insert into collection all the data in the array req.body.data
+        const result = await collection.insertMany(req.body.data);
+
+        res.send({ message: 'Dataset data stored successfully', _id: result.insertedIds});
+    
+    } catch (err) {
+        console.log(err.stack);
+        res.status(500).send({ error: err.message });
     } finally {
         await client.close();
     }
 });
 
-// GET endpoint to retrieve data
-app.get('/getDataset/:datasetName', async (req, res) => {   
+
+// get data of dataset
+app.get('/getDatasetData/:datasetName', async (req, res) => {
     try {
         await client.connect();
         const db = client.db(dbName);
-        const collection = db.collection('datasets');
-
-        // Find the document in the collection
         const datasetName = req.params.datasetName;
-        const query = { datasetName: datasetName };
-        const dataset = await collection.findOne(query);
-
-        if (dataset) {
-            res.status(200).json(dataset);
+        const collection = db.collection(datasetName);
+      
+        const datasetData = await collection.find({}).toArray();
+        
+        if (datasetData) {
+            res.status(200).json(datasetData);
         } else {
-            res.status(404).send(`Dataset with name ${datasetName} not found`);
+            res.status(404).send(`Dataset data with name ${datasetName} not found`);
         }
     } catch (err) {
         res.status(500).send("Error retrieving data: " + err.message);
@@ -206,6 +233,160 @@ app.get('/getDataset/:datasetName', async (req, res) => {
         await client.close();
     }
 });
+
+
+
+
+
+// get dataset data distinct values by field
+app.get('/getDatasetDataDistinct/:datasetName/:field', async (req, res) => {
+    try {
+        await client.connect();
+        const db = client.db(dbName);
+       
+        const datasetName = req.params.datasetName;
+        const collection = db.collection(datasetName);
+        const field = req.params.field;
+        const distinctValues = await collection.distinct(field);
+        if (distinctValues) {
+            res.status(200).json(distinctValues);
+        } else {
+            res.status(404).send({error:`Distinct values for field ${field} in dataset ${datasetName} not found`});
+        }
+    } catch (err) {
+        res.status(500).send("Error retrieving data: " + err.message);
+    } finally {
+        await client.close();
+    }
+});
+
+
+// get dataset data by dataset name and filter
+app.get('/getDatasetDataByFilter', async (req, res) => {
+    try {
+        console.log(req.query);
+       
+        const { datasetName, fields, value, groups, agg, funct } = req.query;
+        if (!datasetName ) {
+            return res.status(400).send({ error: 'Missing required parameters' });
+          }
+          const results = await filterDocuments(datasetName, fields, value, groups, agg, funct);
+         
+          res.status(200).json(results);
+        } catch (err) {
+            res.status(500).send({ error: err.message });
+        }
+      
+    }
+);
+            
+
+async function filterDocuments(datasetName, fields, values, groups, agg, funct) {
+    try {
+        await client.connect();
+        const db = client.db(dbName);
+        const collection = db.collection(datasetName);
+        const pipeline = [ ];
+      // Split values by comma and trim whitespace
+      if (fields && values) {
+            const valuesArray = values.split(';').map(value => value.trim());
+            const fieldsArray = fields.split(',').map(value => value.trim());
+            //  console.log(valueArray);
+            // Dynamically construct the query based on fields and values
+            let query = {};
+            fieldsArray.forEach((field, index) => {
+            // Use $in if the corresponding value is an array, otherwise directly assign the value
+            const values = valuesArray[index].split(',');
+            query[field] =values.length>1 ? { $in: values } : values[0];
+            });
+            pipeline.push({ $match: query });
+        }
+          // check if group by and aggregation are provided
+        if (groups && agg && funct) {
+            console.log(groups);
+              switch (funct) {
+                case 'std':
+                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $stdDevPop: `$${agg}` } } });
+                break;
+                case 'distinct':
+                    // count distinct values
+                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $sum: 1 } } });
+                break;
+                case 'value':
+                    pipeline.push({ $project: { [groups]: 1, [agg]: 1, _id: 0 } });
+                break;
+                case 'count':
+                case 'sum':
+                case 'avg':
+                case 'min':
+                case 'max': 
+                case 'first':
+                case 'last':                
+                     pipeline.push({ $group: { _id: `$${groups}`, [agg]: { [`$${funct}`]: `$${agg}` } } });
+                break;
+               case 'percentile':
+                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $push: `$${agg}` } } });
+                    pipeline.push({ $project: { [agg]: { $arrayElemAt: [`$${agg}`, 0] } } });
+                break;
+                default:
+                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $sum: 1 } } });
+                break;
+                case 'var':
+                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $variancePop: `$${agg}` } } });
+                break;
+                case 'regression':
+                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $push: `$${agg}` } } });
+                    pipeline.push({ $project: { [agg]: { $arrayElemAt: [`$${agg}`, 0] } } });
+                break;
+                case 'histogram':
+                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $push: `$${agg}` } } });
+                    pipeline.push({ $project: { [agg]: { $arrayElemAt: [`$${agg}`, 0] } } });
+                break;
+                case 'median':
+                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $push: `$${agg}` } } });
+                    pipeline.push({ $project: { [agg]: { $arrayElemAt: [`$${agg}`, 0] } } });
+                break
+                case 'mode':
+                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $push: `$${agg}` } } });
+                    pipeline.push({ $project: { [agg]: { $arrayElemAt: [`$${agg}`, 0] } } });
+                break;
+                case 'covariance':
+                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $push: `$${agg}` } } });
+                    pipeline.push({ $project: { [agg]: { $arrayElemAt: [`$${agg}`, 0] } } });
+                break;
+                case 'correlation':
+                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $push: `$${agg}` } } });
+                    pipeline.push({ $project: { [agg]: { $arrayElemAt: [`$${agg}`, 0] } } });
+                break;
+                case 'frequency':
+                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $sum: 1 } } });
+                break;
+                case 'kmeans':
+                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $push: `$${agg}` } } });
+                    pipeline.push({ $project: { [agg]: { $arrayElemAt: [`$${agg}`, 0] } } });
+                break;
+            }
+            
+           
+        }
+           // const results = await collection.aggregate(pipeline).toArray();
+           console.log(pipeline);
+
+        const options = {
+           // skip: (page - 1) * limit, // Calculate the number of documents to skip
+            limit: parseInt(1000), // Number of documents to limit the query to
+          };
+        const results = await collection.aggregate(pipeline,options).toArray();
+        return results;
+    } catch (err) {
+      console.error('An error occurred:', err);
+      throw err; // Rethrow the error after logging it
+    }
+    finally {
+        await client.close();
+    }
+  }
+
 
 // GET endpoint to retrieve all datasets
 app.get('/getAllDatasets', async (req, res) => {  
