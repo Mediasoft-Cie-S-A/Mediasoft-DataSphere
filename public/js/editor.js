@@ -110,7 +110,7 @@ function editElement(element) {
         
         const label = document.createElement('label');
         label.textContent = element.id;
-	label.style.float = "left";
+	    label.style.float = "left";
         label.style.backgroundColor = "grey";
         label.style.color = "white";
         content.appendChild(label);

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+const { error } = require('console');
+
 module.exports = function(app, client, dbName) {
     const checkAuthenticated = (req, res, next) => {
         if (req.isAuthenticated()) { return next(); }
@@ -432,5 +434,53 @@ app.get('/getDatasetList', async (req, res) => {
     }   
     });
 
+
+
+
+// ptyhon code 
+app.post('/generate-plot', (req, res) => {
+    const { data, plot_type, x_label, y_label, title, file_name, custom_code } = req.body;
+    // Prepare the input for the Python script as a JSON string
+    const inputForPython = JSON.stringify({ data, plot_type, x_label, y_label, title, file_name, custom_code });
+
+    // Execute the Python script
+    const fs = require('fs');
+    const path = require('path');
+    const { spawn } = require('node:child_process');
+  //  console.log(path.join(__dirname, 'plot.py'));
+   // console.log(inputForPython);
+    const pythonProcess = spawn('py', [path.join(__dirname, 'plot.py'), inputForPython]);
+    pythonProcess.stdout.on('data', (data) => {
+        console.log(`stdout: ${data}`);
+    });
+    
+    pythonProcess.stderr.on('data', (data) => {
+        console.error(`stderr: ${data}`);
+    });
+    
+    pythonProcess.on('close', (code) => {
+        console.log(`child process exited with code ${code}`);
+        // Assuming the Python script saves the image as 'plot.png' in the current directory
+        const imagePath = path.join(__dirname, file_name);
+
+        // Check if the image was generated and exists
+        if (fs.existsSync(imagePath)) {
+            // Read the image and send it as a response
+            fs.readFile(imagePath, (err, image) => {
+                if (err) {
+                    res.status(500).send("Error reading the plot image.");
+                } else {
+                    res.writeHead(200, {
+                        'Content-Type': 'image/png',
+                        'Content-Disposition': 'attachment; filename=plot.png',
+                    });
+                    res.end(image, 'binary');
+                }
+            });
+        } else {
+            res.status(500).send("Plot image not generated.");
+        }
+    });
+});
     // Other form routes...
 };
