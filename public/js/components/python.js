@@ -13,7 +13,7 @@ function createPython(type)
     python.setAttribute('title', 'Title');
     python.setAttribute('customCode', '');
     python.innerHTML = "<div class='python-header'> <img id='plotImage' src='' alt='Generated plot will appear here' hidden></div>";
-    render(python);
+    renderPython(python);
     return python;
 }
 
@@ -24,7 +24,7 @@ function editPython(type,element,content)
     const button = document.createElement('button');
     button.textContent = 'Update';
     button.onclick = function() {
-        render(element);
+        updatePython(element);
     };
     content.appendChild(button);
     var data=createMultiSelectItem("Data", "data", "data",element.getAttribute('data'),"text",true);   
@@ -64,8 +64,9 @@ function editPython(type,element,content)
      regenerateFilters(content,JSON.parse(element.getAttribute("filter")));
 }
 
-function render(python)
+function updatePython(element,content)
 {
+    console.log("renderPython");
     var dataInput=propertiesBar.querySelector('#Data');
  
     // get value of legend
@@ -95,7 +96,15 @@ function render(python)
         
     });
     python.setAttribute("dataConfig",JSON.stringify(dataConfig));
+    renderPython(python);
+}
 
+function renderPython(python)
+{
+    
+    // get dataconfig json
+    var dataConfig=JSON.parse(python.getAttribute("dataConfig"));
+   
     // Collecting form data
     const plotType = python.getAttribute('plotType');
     const xLabel = python.getAttribute('xLabel');
@@ -104,9 +113,9 @@ function render(python)
     const fileName = python.getAttribute('filename');
     const customCode = python.getAttribute('customCode');
     const fields = dataConfig.map(config => config.fieldName);
-    const legend = legendField;
+    const legend = python.getAttribute("labels-data-field");;
     var url = getFilterUrl(python);
-
+    console.log(url);
     const request = new XMLHttpRequest();
     request.open("GET", url, false); // `false` makes the request synchronous
     request.send(null);

@@ -477,6 +477,12 @@ app.post('/generate-plot', (req, res) => {
                     res.end(image, 'binary');
                 }
             });
+            // Delete the image file after sending it
+            fs.unlink(imagePath, (err) => {
+                if (err) {
+                    console.error("Error deleting the plot image.");
+                }
+            });
         } else {
             res.status(500).send("Plot image not generated.");
         }

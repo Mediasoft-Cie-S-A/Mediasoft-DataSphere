@@ -184,6 +184,14 @@ function loadFormData(formId,renderContainer=document.getElementById('renderForm
                 generateChart(chartNumber,chartType,chart);
             });
              
+            // get all the div the the tagname=python
+            var pythons = document.querySelectorAll('[tagname="python"]');
+            // loop through the pythons
+            pythons.forEach(python => {
+               // render the python
+               console.log(python);
+               renderPython(python);
+            }  );
             console.log(domContent);
            
         })
