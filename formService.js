@@ -439,9 +439,9 @@ app.get('/getDatasetList', async (req, res) => {
 
 // ptyhon code 
 app.post('/generate-plot', (req, res) => {
-    const { data, plot_type, x_label, y_label, title, file_name, custom_code } = req.body;
+    const { data, fields, legend, plot_type, x_label, y_label, title, file_name, custom_code } = req.body;
     // Prepare the input for the Python script as a JSON string
-    const inputForPython = JSON.stringify({ data, plot_type, x_label, y_label, title, file_name, custom_code });
+    const inputForPython = JSON.stringify({ data, fields, legend, plot_type, x_label, y_label, title, file_name, custom_code });
 
     // Execute the Python script
     const fs = require('fs');
@@ -481,7 +481,7 @@ app.post('/generate-plot', (req, res) => {
             res.status(500).send("Plot image not generated.");
         }
     });
-    
+
 });
     // Other form routes...
 };
