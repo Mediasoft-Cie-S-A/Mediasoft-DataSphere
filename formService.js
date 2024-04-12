@@ -481,6 +481,7 @@ app.post('/generate-plot', (req, res) => {
             res.status(500).send("Plot image not generated.");
         }
     });
+    
 });
     // Other form routes...
 };
