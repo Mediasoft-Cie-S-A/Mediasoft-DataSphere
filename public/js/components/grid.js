@@ -1,13 +1,13 @@
+const e = require("express");
+
 // Example usage
 var dataset = 
      [
-        ['Alice', 30, 'Developer'],
-        ['Bob', 25, 'Designer'],
-        ['Charlie', 35, 'Manager']
+        
     ];
 
 
-var labels = ['Name', 'Age', 'Job'];
+var labels = [];
 
 
 
@@ -28,12 +28,13 @@ function editElementGrid(type,element,content)
 {
     const button = document.createElement('button');
     button.textContent = 'update';
-    button.onclick = function() {
+    button.onclick = function(event) {
         const propertiesBar = document.getElementById('propertiesBar');
                   const gridID=propertiesBar.querySelector('label').textContent;
                  
                   const main = document.getElementById(gridID);  
-        updateGridData(main);
+                  updateGridJsonData(element);
+        
     };
     content.appendChild(button);
     content.appendChild(createMultiSelectItem("Data", "data", "data",element.getAttribute('data'),"text",true));
@@ -43,6 +44,39 @@ function editElementGrid(type,element,content)
        switchView(event,content,'standard');
        regenerateFilters(content,JSON.parse(element.getAttribute("filter")));
 
+}
+
+function updateGridJsonData(element) {
+    // get propertiesBar
+
+ const propertiesBar = document.getElementById('propertiesBar');
+ const chartID=propertiesBar.querySelector('label').textContent;
+
+
+
+ console.log("currentChart:"+currentChart);
+
+ console.log("propertiesBar:"+propertiesBar);
+ // get value of x-axis
+ var dataInput=propertiesBar.querySelector('#Data');
+
+
+ var dataSelect=dataInput.querySelectorAll('div');
+
+ // generate array of data
+ var dataConfig=[];
+ dataSelect.forEach(item => {
+     var selectFunction=item.querySelector('select');
+     var functionName=selectFunction[selectFunction.selectedIndex].value;
+     var fieldName=item.querySelector('span').getAttribute('data-field-name');
+     var dataType=item.querySelector('span').getAttribute('data-type');
+     var dataset=item.querySelector('span').getAttribute('dataset');
+     element.setAttribute("dataSet",dataset);
+     dataConfig.push({fieldName:fieldName,functionName:functionName,dataType:dataType,dataset:dataset});
+     
+ });
+ element.setAttribute("dataConfig",JSON.stringify(dataConfig));
+ updateGridData(element);
 }
 
 function render(dataset, labels, container,rowsPerPage=10) {
@@ -110,8 +144,9 @@ function render(dataset, labels, container,rowsPerPage=10) {
         const row = document.createElement('tr');
         for(var j=0;j<dataset.length;j++)
         {
+            var value=dataset[j];
             const cell = document.createElement('td');
-            cell.textContent = dataset[j][i];
+            cell.textContent = value[i];
             row.appendChild(cell);
         }
         tbody.appendChild(row);
@@ -134,63 +169,60 @@ function getGrid(){
 }
 
 
-function updateGridData(main) {
+function updateGridData(element) {
    
-    const chart=getChart();
+    dataConfig=JSON.parse(element.getAttribute("dataConfig"));
 
-    // get propertiesBar
-     const propertiesBar = document.getElementById('propertiesBar');
-     // get value of x-axis
-     var dataInput=propertiesBar.querySelector('#Data');
-  
+      
      var gridDatasets=[];
      var labels=[];
-     query = dataInput.getAttribute("dataSet");
-     console.log("query:"+query);
-     var url = '/query/'+query;
-     console.log('url:', url);
-     fetch(url)
-     .then(response => response.json())
-     .then(data => {
-             // get the labels
-               
-                 
-                 // get from legend the value of the function
-               
-                
-                 // get the function name
-                 var dataSelect=dataInput.querySelectorAll('div');
-                 var i=0;    
-                 dataSelect.forEach(item => {
-               
-                     var functionName=item.querySelector('select')[item.querySelector('select').selectedIndex].value;
-                     console.log("functionName:"+functionName);
- 
-                     var fieldName=item.querySelector('span').getAttribute('data-field-name');
-                     console.log("fieldName:"+fieldName);
-                     // get the data
-                     
-                     // if function is value
-                     
-                         
- 
-                     columnData=getDataByFunction(data,fieldName,functionName,fieldName);
-                    // clear the chart datasets
-                      console.log("data"+columnData);
-                      
-               
-                      
-                         labels.push(fieldName);
-                      
-                         
-                         gridDatasets.push(columnData);
-                     i++;
+
+     for (index=0;index<dataConfig.length;index++)
+     {
+        console.log(index);
+         var config=dataConfig[index];
+         console.log(config);
+         var functionName=config.functionName;
+         console.log("functionName:"+functionName);
+
+         var fieldName=config.fieldName;
+         console.log("fieldName:"+fieldName);
+         // prepare the dataset
+         
+         labels.push(fieldName);
+         // get the dataset data from the server, using the filter
+
+         var url = getFilterUrl(element);
+        url+="&groups="+labelName+"&agg="+fieldName+"&funct="+functionName;
+       
+        const request = new XMLHttpRequest();
+         request.open("GET", url, false); // `false` makes the request synchronous
+         request.send(null);
+        
+            if (request.status === 200) {
+             querydata = request.responseText;
+            }
+
+          const data=JSON.parse(querydata);
+          
+                 // assign the data to the chart only the fields name
+             
+                 var rowdata=[];          
+                 data.forEach(item => {
+                 //   console.log(item);
+                    
+                        rowdata.push(item[fieldName]);
+                                  
                  });
-                
-                 render(gridDatasets, labels, main,10);
-                
- 
-     });              
+             
+                 gridDatasets.push(rowdata);
+           
+            
+   
+        }// for(index=0;index<dataConfig.length;index++)
+     
+        render(gridDatasets, labels, element,10);
+         
      
     
 

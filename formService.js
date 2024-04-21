@@ -242,24 +242,23 @@ app.get('/getDatasetData/:datasetName', async (req, res) => {
 
 // get dataset data distinct values by field
 app.get('/getDatasetDataDistinct/:datasetName/:field', async (req, res) => {
-    try {
-        await client.connect();
-        const db = client.db(dbName);
-       
-        const datasetName = req.params.datasetName;
-        const collection = db.collection(datasetName);
-        const field = req.params.field;
-        const distinctValues = await collection.distinct(field);
-        if (distinctValues) {
-            res.status(200).json(distinctValues);
-        } else {
-            res.status(404).send({error:`Distinct values for field ${field} in dataset ${datasetName} not found`});
-        }
-    } catch (err) {
-        res.status(500).send("Error retrieving data: " + err.message);
-    } finally {
-        await client.close();
-    }
+   try {
+       await client.connect();
+       const db = client.db(dbName);
+       const datasetName = req.params.datasetName;
+       const field = req.params.field;
+       const collection = db.collection(datasetName);
+       const distinctValues = await collection.distinct(field);
+       if (distinctValues) {
+           res.status(200).json(distinctValues);
+       } else {
+           res.status(404).send(`Distinct values for field ${field} not found`);
+       }
+   } catch (err) {
+       res.status(500).send("Error retrieving data: " + err.message);
+   } finally {
+       await client.close();
+   }
 });
 
 

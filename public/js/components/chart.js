@@ -79,7 +79,7 @@ function editElementChart(type,element,content)
     button.textContent = 'update';
     button.onclick = function() {
         
-        updateChartData();
+        updateJsonData();
     };
     content.appendChild(button);
     var data=createMultiSelectItem("Data", "data", "data",element.getAttribute('data'),"text",true);   
@@ -95,7 +95,7 @@ function editElementChart(type,element,content)
     
     dataConfig.forEach(config => {
       console.log(config.fieldName + ' ' + config.dataType + ' ' + config.functionName);
-      addFieldToPropertiesBar(data,config.fieldName,config.dataType,config.functionName);
+      addFieldToPropertiesBar(data,config);
     });
     // get lendend input
     const legendInput=legend.querySelector('input');
@@ -124,7 +124,7 @@ function clearCharts()
 }
 
 // function to adding new fileds to the properties bar
-function addFieldToPropertiesBar(target,field,dataType,functionName)
+function addFieldToPropertiesBar(target,config)
 {
     var dataObjet=target;
     // create the div
@@ -133,8 +133,12 @@ function addFieldToPropertiesBar(target,field,dataType,functionName)
     const elementId=field+"-"+Date.now();
     div.id=elementId;
     // get field name
-    
-    div.innerHTML=`<button class="remove-item" onclick="removeItem(event)">x</button><span data-field-name="${field}" data-type="${dataType}">${field}</span>`;
+    var field=config.fieldName;
+    var dataType=config.dataType;
+    var functionName=config.functionName;
+    var dataset=config.dataset;
+    // create the span
+    div.innerHTML=`<button class="remove-item" onclick="removeItem(event)">x</button><span name="dataContainer" data-field-name="${field}" data-type="${dataType}" dataset="${dataset}">${field}</span>`;
     dataObjet.appendChild(div);
   
     // generate the select
@@ -512,7 +516,7 @@ function createMultiSelectItem(id, label, styleProperty,text,type,attribute)
 
     div.id = id;
     var lbl = document.createElement("span");
-  
+   
     lbl.innerText   = label;
     
     
@@ -534,7 +538,7 @@ function createMultiSelectItem(id, label, styleProperty,text,type,attribute)
 
 
 
-function updateChartData() {
+function updateJsonData() {
        // get propertiesBar
 
     const propertiesBar = document.getElementById('propertiesBar');
@@ -571,7 +575,8 @@ function updateChartData() {
         var functionName=selectFunction[selectFunction.selectedIndex].value;
         var fieldName=item.querySelector('span').getAttribute('data-field-name');
         var dataType=item.querySelector('span').getAttribute('data-type');
-        dataConfig.push({fieldName:fieldName,functionName:functionName,dataType:dataType});
+        var dataset=item.getAttribute('dataset');
+        dataConfig.push({fieldName:fieldName,functionName:functionName,dataType:dataType,dataset:dataset});
         
     });
     currentChart.setAttribute("dataConfig",JSON.stringify(dataConfig));

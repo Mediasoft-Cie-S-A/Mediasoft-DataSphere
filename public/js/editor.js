@@ -350,8 +350,8 @@ function dropInput(event) {
             case "data":
               // generate the input element
               // get the field type
-               
-                addFieldToPropertiesBar(event.target,field,type,"value");
+                let config = {fieldName:field,dataType:type,dataset:dataset,functionName:"value"};
+                addFieldToPropertiesBar(event.target,config);
             break;
             case "filters":
                 // generate the input element

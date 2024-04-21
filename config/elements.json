@@ -108,6 +108,16 @@
         "editFunction": "editPython",
         "styles": "python.css",
         "image": "img/python.png"
+    },
+    "filter": {
+        "type": "filter",
+        "description": "Filter",
+        "category": "Data",
+        "scriptName": "filter.js",
+        "createFunction": "createElementFilter",
+        "editFunction": "editElementFilter",
+        "styles": "filter.css",
+        "image": "img/filter.png"
     }
     
 

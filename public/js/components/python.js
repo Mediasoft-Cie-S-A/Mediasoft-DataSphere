@@ -24,7 +24,7 @@ function editPython(type,element,content)
     const button = document.createElement('button');
     button.textContent = 'Update';
     button.onclick = function() {
-        updatePython(element);
+        updateJsonData(element);
     };
     content.appendChild(button);
     var data=createMultiSelectItem("Data", "data", "data",element.getAttribute('data'),"text",true);   
@@ -43,7 +43,7 @@ function editPython(type,element,content)
     
     dataConfig.forEach(config => {
       console.log(config.fieldName + ' ' + config.dataType + ' ' + config.functionName);
-      addFieldToPropertiesBar(data,config.fieldName,config.dataType,config.functionName);
+      addFieldToPropertiesBar(data,config);
     });
     // get lendend input
     const legendInput=legend.querySelector('input');
@@ -64,40 +64,7 @@ function editPython(type,element,content)
      regenerateFilters(content,JSON.parse(element.getAttribute("filter")));
 }
 
-function updatePython(element,content)
-{
-    console.log("renderPython");
-    var dataInput=propertiesBar.querySelector('#Data');
- 
-    // get value of legend
-    const legendDiv=propertiesBar.querySelector('#Legend');
-    const legendInput=legendDiv.querySelector('input');    
-    const legendField=legendInput.value;
-    const dataSet = legendInput.getAttribute("dataSet");
-    const legendType=legendInput.getAttribute("datatype");
-    const legendSelect=legendDiv.querySelector('select');
-    const legendfunction=legendSelect.options[legendSelect.selectedIndex].value;
 
-    python.setAttribute("labels-data-field",legendField);
-    python.setAttribute("labels-data-function",legendfunction);
-    python.setAttribute("labels-data-type",legendType);   
-   
-    python.setAttribute("dataSet",dataSet);
-    var dataSelect=dataInput.querySelectorAll('div');
-   
-    // generate array of data
-    var dataConfig=[];
-    dataSelect.forEach(item => {
-        var selectFunction=item.querySelector('select');
-        var functionName=selectFunction[selectFunction.selectedIndex].value;
-        var fieldName=item.querySelector('span').getAttribute('data-field-name');
-        var dataType=item.querySelector('span').getAttribute('data-type');
-        dataConfig.push({fieldName:fieldName,functionName:functionName,dataType:dataType});
-        
-    });
-    python.setAttribute("dataConfig",JSON.stringify(dataConfig));
-    renderPython(python);
-}
 
 function renderPython(python)
 {
