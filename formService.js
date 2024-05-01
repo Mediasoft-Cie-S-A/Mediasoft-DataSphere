@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+const OdbcDatabase = require('./OdbcDatabase'); 
 const { error } = require('console');
 
 module.exports = function(app, client, dbName) {
@@ -21,6 +21,9 @@ module.exports = function(app, client, dbName) {
         if (req.isAuthenticated()) { return next(); }
         res.redirect("/login");
     };
+
+    const odbcdb = new OdbcDatabase( app.config.odbcString);
+
     app.get("/dashboard",checkAuthenticated, (req, res) => {   
         res.render("dashboard.ejs", {name: req.user.name})
     })
@@ -191,26 +194,36 @@ app.post('/storeDataset', async (req, res) => {
 
 app.post('/storeDatasetData', async (req, res) => {
 
-    try {
-        await client.connect();
-        const db = client.db(dbName);
-        if (!req.body.datasetName || !req.body.data) {
+    
+        
+        if (!req.body.datasetName || !req.body.sqlQuery) {
+
             return res.status(400).send({ error: 'Missing required parameters' });
         }
-        const collection = db.collection(req.body.datasetName);
-        collection.drop();
+        
        
-       // insert into collection all the data in the array req.body.data
-        const result = await collection.insertMany(req.body.data);
+        try {
+            await odbcdb.connect();
+            await client.connect();
+             const mongodb = client.db(dbName);
+             const collection = mongodb.collection(req.body.datasetName);
+             collection.drop();
+             const data = await odbcdb.queryData(req.body.sqlQuery);
+             const result = await collection.insertMany(data);
+            res.send({ message: 'Dataset data stored successfully', _id: result.insertedIds});
+          
+        } catch (err) {
+            console.error(err);
+            res.status(500).send({Error: ' executing query'});
+        } finally {
+            await odbcdb.close();
+            await client.close();
+        }
 
-        res.send({ message: 'Dataset data stored successfully', _id: result.insertedIds});
+       // insert into collection all the data in the array req.body.data
+       
     
-    } catch (err) {
-        console.log(err.stack);
-        res.status(500).send({ error: err.message });
-    } finally {
-        await client.close();
-    }
+    
 });
 
 

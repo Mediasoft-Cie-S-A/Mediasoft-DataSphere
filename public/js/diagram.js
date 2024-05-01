@@ -639,22 +639,16 @@ function saveDataset()
 // update Data of dataset in the database with '/storeDataset' endpoint
 function updateDataset(ds)
 {
-    // update the query
-    const url = '/query/'+ds.query;
-    console.log('url:', url);
-    fetch(url)
-    .then(response => response.json())
-    .then(data => {
-        console.log(data);
+  
        // store the dataset with storeDatasetData
        const datasetDataPost = {
         datasetName: ds.datasetName,
-        data: data,
+        sqlQuery: ds.query,
         userCreated: 'internal',
         userModified: 'internal',
         modificationDate: new Date(),
         creationDate: new Date()
-       }
+       };
          console.log('datasetDataPost:', datasetDataPost);
         // post the dataset to the server with '/storeDatasetData' endpoint
         fetch('/storeDatasetData', {
@@ -674,8 +668,7 @@ function updateDataset(ds)
         });
 
       
-    })
-    .catch(error => console.error('Error:', error));
+  
 }
 
 function createTableList(list,datasets) {

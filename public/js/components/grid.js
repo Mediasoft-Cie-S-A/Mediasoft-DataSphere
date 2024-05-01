@@ -85,7 +85,7 @@ function render(dataset, labels, container,rowsPerPage=10) {
         console.error('Container not found');
         return;
     }
-    if (dataset.length === 0) {
+    if (!dataset) {
         console.error('No data provided');
         return;
     }
@@ -114,15 +114,51 @@ function render(dataset, labels, container,rowsPerPage=10) {
 
     // Pagination controls
     const paginationDiv = document.createElement('div');
+   
     for (let i = 1; i <= totalPages; i++) {
         const pageButton = document.createElement('button');
-        pageButton.style.margin = '3px';
+        pageButton.style.margin = '1px';
         pageButton.style.direction = 'rtl';
         pageButton.style.display = 'inline-block';
+        pageButton.style.alignSelf = 'left';
         pageButton.textContent = i;
         pageButton.onclick = () => changePage(i);
         paginationDiv.appendChild(pageButton);
     }
+
+    const exportButton = document.createElement('button');
+    exportButton.innerHTML = '<i class="fas fa-file-export"></i>';
+    exportButton.style.margin = '1px';
+    exportButton.style.direction = 'rtl';
+    exportButton.style.display = 'inline-block';
+    exportButton.style.alignSelf = 'right';
+    exportButton.onclick = () => {
+        console.log('Exporting data');
+        console.log(labels);
+        console.log(dataset[0]);
+        let csv = labels.join(',') ;
+        csv += '\n';
+        for (let i = 0; i < dataset[0].length; i++) {
+            for (let j = 0; j < dataset.length; j++) {
+                csv += dataset[j][i];
+                if (j < dataset.length - 1) {
+                    csv += ',';
+                }
+            }
+            csv += '\n';
+        }
+        
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'data.csv';
+        a.click();  
+        URL.revokeObjectURL(url);
+
+    };
+    paginationDiv.appendChild(exportButton);
 
     container.innerHTML = '';
     container.appendChild(table);
@@ -193,7 +229,7 @@ function updateGridData(element) {
          // get the dataset data from the server, using the filter
 
          var url = getFilterUrl(element);
-        url+="&groups="+labelName+"&agg="+fieldName+"&funct="+functionName;
+        //url+="&groups="+labelName+"&agg="+fieldName+"&funct="+functionName;
        
         const request = new XMLHttpRequest();
          request.open("GET", url, false); // `false` makes the request synchronous
