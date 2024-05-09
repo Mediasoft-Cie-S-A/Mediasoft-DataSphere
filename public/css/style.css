@@ -1235,7 +1235,7 @@ tr:nth-child(even) {
   .remove-item {
     color: white;
     cursor: pointer;
-    border: 1px solid red;
+    border: 1px solid #ccc;
     width: 20px;
     height: 20px;
     padding: 0px;

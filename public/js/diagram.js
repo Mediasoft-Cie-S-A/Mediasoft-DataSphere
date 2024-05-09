@@ -88,6 +88,8 @@ function generateTableDiagram(elementId)
 {
  //get the element 
     var element=document.getElementById(elementId);
+    // get the db name  
+    var dbName=element.getAttribute('data-db-name');
     // get the table name
     var tableName=element.getAttribute('data-table-name');
     // get the table label
@@ -99,7 +101,7 @@ function generateTableDiagram(elementId)
     createTableDiagram(tableName,tableLabel);
     // get the table fields and inser it in array
     var tableFields=[];
-    fetch(`/table-fields/${tableName}`)
+    fetch(`/table-fields/${dbName}/${tableName}`)
     .then(response => response.json())
     .then(fields => {
         console.log('fields:', fields);
@@ -422,7 +424,13 @@ function createTableDiagram( tableName, description) {
        // y+=rowHeight;
         i++;
     });
-    editTableFieldList();
+
+    // if selecte language is SQL generate the SQL query
+    // get value of select language
+    var language = document.getElementById('language').value;
+   
+    editTableFieldList(language);
+   
   }
 
   function moveChildElements(element, cx, cy) {
@@ -820,7 +828,7 @@ function getDatasets()
       jsonToDom(dataset.diagram,div);
   } 
 
-  function editTableFieldList()
+  function editTableFieldList(language)
   {
     const editTableFields = document.getElementById('TableEdit');
   
@@ -864,9 +872,82 @@ function getDatasets()
      
    // window.editor.options.hintOptions.tables[tableName]=sqlEditorTable;
     // generate sql query
+    if (language=='SQL' )
         generateSQLByEditFields();
+    if (language=='4GL')
+        generate4GLByEditFields();
   }
     
+
+function generate4GLByEditFields()
+{
+    const editTableFields = document.getElementById('TableEdit');
+    // get the list of div
+    var fields=editTableFields.querySelectorAll('div');
+    var sqlQuery="DEFINE VARIABLE ";
+    var sqlEditorFileds=[];
+    var sqlEditorTables=[];
+    fields.forEach(field => {
+        // get the table name
+        var tableName=field.getAttribute('data-table-name');
+        // get the field name
+        var fieldName=field.getAttribute('data-table-field');
+        // get the checkbox
+        var checkbox=field.querySelector('input[type="checkbox"]');
+        // get the alias
+        var alias=field.querySelector('input[type="text"]');
+        if (checkbox.checked)
+        {
+            if (alias.value)
+            {
+                sqlQuery+=tableName+"."+fieldName+" AS "+alias.value+", ";
+            }
+            else
+            {
+                sqlQuery+=tableName+"."+fieldName+", ";
+            }
+           
+        }
+        sqlEditorFileds.push("PUB."+tableName+"."+fieldName);
+        // if the table is not in the sqlEditorTables array add it
+        if (!sqlEditorTables.includes("PUB."+tableName))
+        {
+            sqlEditorTables.push("PUB."+tableName);
+        }
+    });
+
+    window.editor.options.hintOptions.tables=sqlEditorFileds;
+    sqlQuery=sqlQuery.substring(0,sqlQuery.length-2);   
+    sqlQuery+="\n FROM ";
+    // get the first table
+    if (sqlEditorTables.length==1)
+    {    
+        sqlQuery+=sqlEditorTables[0];
+    }
+    else
+    {
+        // check if exists the link between the tables
+        var svgDiagram = document.getElementById('svgDiagram');
+        var links=svgDiagram.querySelectorAll('polyline[id^="Link_"]');
+        if (links.length>0)
+        {
+            links.forEach(link => {
+                var sourceID=link.getAttribute('sourceID');
+                var targetID=link.getAttribute('targetID');
+                console.log('sourceID:', sourceID);
+                console.log('targetID:', targetID);
+                var source=svgDiagram.querySelector("rect[id='"+sourceID+"']");
+                var target=svgDiagram.querySelector("rect[id='"+targetID+"']");
+                var sourcteTable=source.getAttribute('data-table-name');
+                var targetTable=target.getAttribute('data-table-name');
+                var sourceField=source.getAttribute('data-table-field');
+                var targetField=target.getAttribute('data-table-field');
+                sqlQuery+=sourcteTable+" INNER JOIN "+targetTable+" ON "+sourcteTable+"."+sourceField+"="+targetTable+"."+targetField;
+            }
+            );
+        }
+    }
+}
 function generateSQLByEditFields()
 {
     const editTableFields = document.getElementById('TableEdit');

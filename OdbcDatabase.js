@@ -14,10 +14,13 @@
  * limitations under the License.
  */
 
-const odbc = require('odbc');
+
 
 class OdbcDatabase {
+    odbc = require('odbc');
+    connection = null;
     constructor(connectionString) {
+       
         this.connectionString = connectionString;
     }
 
@@ -25,11 +28,12 @@ class OdbcDatabase {
         try {
             const connectionConfig = {
                 connectionString: this.connectionString,
-                connectionTimeout: 10,
-                loginTimeout: 10,
+                connectionTimeout: 100,
+                loginTimeout: 100,
             }
-            this.connection = await odbc.connect(connectionConfig);
-            this.connection.setIsolationLevel(odbc.SQL_TXN_READ_UNCOMMITTED);
+            this.connection = await this.odbc.connect(connectionConfig);
+    
+            this.connection.setIsolationLevel(this.odbc.SQL_TXN_READ_UNCOMMITTED);
         } catch (err) {
             console.log('Error connecting to the database:', err);
           //  throw err;

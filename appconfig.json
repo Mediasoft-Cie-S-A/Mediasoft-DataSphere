@@ -1,6 +1,8 @@
 {
     "port": 3000,
-    "odbcString": "DSN=Sports2000;UID=sysprogress;PWD=sysprogress",
+    "dblist": { 
+            "msdb" :"DSN=msdb;UID=sysprogress;PWD=sysprogress",
+            "msec" :"DSN=msec;UID=sysprogress;PWD=sysprogress"},
     "mongoDbUrl": "mongodb://0.0.0.0:27017",
     "mongoDbName": "mshashDB",    
     "sessionSecret": "secJKDFUret",

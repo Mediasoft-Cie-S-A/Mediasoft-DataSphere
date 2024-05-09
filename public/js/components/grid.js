@@ -1,4 +1,3 @@
-const e = require("express");
 
 // Example usage
 var dataset = 
@@ -76,6 +75,7 @@ function updateGridJsonData(element) {
      
  });
  element.setAttribute("dataConfig",JSON.stringify(dataConfig));
+ 
  updateGridData(element);
 }
 
@@ -147,7 +147,7 @@ function render(dataset, labels, container,rowsPerPage=10) {
             }
             csv += '\n';
         }
-        
+
 
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);

@@ -28,32 +28,55 @@ var tableList=[];
 function fetchTablesList(list) {
     fetch('/tables-list')
         .then(response => response.json())
-        .then(tables => {
-            console.log(tables);
+        .then(dbs => {
+            console.log('dbs:', dbs);
             list.innerHTML = '';
              // add new table button
              tableList=[];
-            tables.forEach(table => {
-                const listItem = document.createElement('div');
-                listItem.classList.add('table-item');
-                listItem.innerHTML = '<i class="fas fa-table"></i>'+table.NAME;
-                listItem.setAttribute('data-table-name', table.NAME);
-                listItem.setAttribute('data-table-label', table.LABEL);
-                listItem.setAttribute("draggable","true");
-                listItem.setAttribute("ondragstart","drag(event)");
-                listItem.classList.add('draggable');
-                listItem.id=table.NAME;
-                // show hint on hover
-                listItem.setAttribute('title', table.LABEL);
-                list.appendChild(listItem);
-                tableList.push(table.NAME);
-            });
+             for (const [key, value] of Object.entries(dbs)) {
+                    console.log('key:', key);
+                    console.log('dbs[key]:', dbs[key]);
+                    const dbdiv = document.createElement('div');
+                    dbdiv.classList.add('db-item');
+                    dbdiv.innerHTML = '<i class="fas fa-database">'+key+'</i>';
+                    dbdiv.setAttribute('data-db-name', key);
+                    dbdiv.setAttribute('data-db-label', key);
+                    list.appendChild(dbdiv);
+                    value.forEach(table => {
+                        const listItem = document.createElement('div');
+                        listItem.classList.add('table-item');
+                        listItem.innerHTML = '<i class="fas fa-table"></i>'+table.NAME;
+                        listItem.setAttribute('data-db-name', key);
+                        listItem.setAttribute('data-table-name', table.NAME);
+                        listItem.setAttribute('data-table-label', table.LABEL);
+                        listItem.setAttribute("draggable","true");
+                        listItem.setAttribute("ondragstart","drag(event)");
+                        listItem.classList.add('draggable');
+                        listItem.id=table.NAME;
+                        // show hint on hover
+                        listItem.setAttribute('title', table.LABEL);
+                        dbdiv.appendChild(listItem);
+                        tableList.push(table.NAME);
+                    });
+                }
         })
         .catch(error => console.error('Error:', error));
 }
 
 
 
+function searchTable(event,value) {
+    event.preventDefault();
+    var searchValue = value;
+    var tableList = document.querySelectorAll('.table-item');
+    tableList.forEach(table => {
+        if (table.getAttribute('data-table-name').toLowerCase().includes(searchValue.toLowerCase())) {
+            table.style.display = 'block';
+        } else {
+            table.style.display = 'none';
+        }
+    });
+}
 
 
 

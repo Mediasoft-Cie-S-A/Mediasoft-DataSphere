@@ -67,7 +67,11 @@ require('./authStatic')(app,session, passport);
 
 // Import routes
 require('./formService')(app, client, dbName);
-require('./dblayer')(app,session, passport);
+const dblayer = require('./dblayer');
+const dbs= new dblayer(app,session, passport);
+dbs.init();
+
+dbs.generateRoutes(app);
 
 // Swagger definition
 const swaggerDefinition = {

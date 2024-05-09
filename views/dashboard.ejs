@@ -190,11 +190,13 @@
                                     <tr>
                                     <td >
                                         <!-- Sidebar -->
+                                        <input type="text" id="searchTable" onkeyup="searchTable(event,this.value)" placeholder="Search for tables..">
                                         <div id="tableListBar" class="col table-bordered" style="width: 200px; overflow: auto;" >
                                             
                                         </div>
                                     </td>
                                     <td style="width: 100%;">
+                                      
                                         <input type="range" min="0" max="200" value="150" class="slider" id="zoomSliderBodyBodySlider" style="width: 200px;" onchange="zoom(event)">                                     
                                         <div id="DBdiagram" class="col" ondragover="allowDrop(event)" ondrop="dropInputTable(event)" style="width: 100%; height: 400px; overflow: auto;" >
                                            
@@ -211,14 +213,21 @@
                                             <div id="QueryBarBody"  >
                                                 <div style="display: flex;flex-direction: row; flex-wrap: wrap;  vertical-align:bottom;padding: 10px;">
                                                      <div> 
-                                                        <label>DataSet Name: </label>
+                                                        <label style="display: inline-block">Language: </label>
+                                                        <select id="language"  style="display: inline-block;width: 100px;">
+                                                            <option value="SQL">SQL</option>
+                                                            <option value="4GL">4GL</option>
+                                                        </select>
+                                                        <label style="display: inline-block">DataSet Name: </label>
                                                         <input type="text" list="DataSetList" 
-                                                        id="DataSetName" style="width: 300px;" value="" placeholder="Search or insert DataSetName" 
-                                                        onchange="loadDataSetQueryDiagram(this.value)" >
-                                                        <datalist id="DataSetList" style="width: 250px;"></datalist>
+                                                        id="DataSetName" style="width: 300px;display: inline-block" value="" placeholder="Search or insert DataSetName" 
+                                                        onchange="loadDataSetQueryDiagram(this.value)"  >
+                                                        <datalist id="DataSetList" style="width: 400px;"></datalist>
                                                     </div>
-                                                    <div> <button onclick="executeQuery()">></button></div>
-                                                     <div> <button onclick="saveQuery()">Save</button></div>
+                                                    <div> <button onclick="executeQuery()" style="display: inline-block" >></button></div>
+                                                     <div> <button onclick="saveQuery()" style="display: inline-block">Save</button></div>
+                                                      
+                                           
                                                </div>
                                                 <div id="QueryBarBodyBody" >
                                                     <textarea id="QueryBarBodyBodyTextArea" ></textarea>
@@ -321,7 +330,8 @@
         <div class="mb-4">
                        <!-- Github -->
             <a class="btn btn-outline-light btn-floating m-1" href="#!" role="button"><i class="fab fa-github"></i></a>
-        </section>
+            <!-- Linkedin -->
+        </div>
         <!-- Section: Social media -->
     </div>
     <!-- Grid container -->
