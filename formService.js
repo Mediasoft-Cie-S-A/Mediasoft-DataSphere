@@ -13,17 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-const OdbcDatabase = require('./OdbcDatabase'); 
+
 const { error } = require('console');
 
-module.exports = function(app, client, dbName) {
+module.exports = function(app, client, dbs,dbName) {
     const checkAuthenticated = (req, res, next) => {
         if (req.isAuthenticated()) { return next(); }
         res.redirect("/login");
     };
 
-    const odbcdb = new OdbcDatabase( app.config.odbcString);
-
+  
     app.get("/dashboard",checkAuthenticated, (req, res) => {   
         res.render("dashboard.ejs", {name: req.user.name})
     })
@@ -166,7 +165,7 @@ app.post('/storeDataset', async (req, res) => {
             datasetName: req.body.datasetName,
             diagram: req.body.diagram,            
         };
-
+      
         // check if the dataset exists
         const query = { datasetName: dataset.datasetName };
         // Check if a document with the given datasetName exists
@@ -203,22 +202,28 @@ app.post('/storeDatasetData', async (req, res) => {
         
        
         try {
-            await odbcdb.connect();
-            await client.connect();
+          
+             
+        
+             const data = await dbs.executeQuery(dbs.databases,req.body.sqlQuery);
+             
+             console.log(data.length);
+             console.log("insert in mongodb");
+             await client.connect();
              const mongodb = client.db(dbName);
              const collection = mongodb.collection(req.body.datasetName);
-             collection.drop();
-             const data = await odbcdb.queryData(req.body.sqlQuery);
+             // check if the collection exists
+              if (collection) {
+                collection.drop();
+              }
+        
              const result = await collection.insertMany(data);
             res.send({ message: 'Dataset data stored successfully', _id: result.insertedIds});
           
         } catch (err) {
             console.error(err);
             res.status(500).send({Error: ' executing query'});
-        } finally {
-            await odbcdb.close();
-            await client.close();
-        }
+        } 
 
        // insert into collection all the data in the array req.body.data
        

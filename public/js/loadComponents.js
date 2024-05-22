@@ -59,7 +59,7 @@ function createSidebar(elementsData) {
     const sidebar = document.getElementById('componentsSidebar');
     const categories = {};
     var scriptslist = [];
-
+    var csslist = [];
     // Group elements by category
     for (const elementId in elementsData) {
         const elementData = elementsData[elementId];
@@ -117,10 +117,20 @@ function createSidebar(elementsData) {
                         .catch(error => {
                             console.log('Error loading script:', error);
                         });
-                    scriptslist.push(scriptUrl); }
-                
+                    scriptslist.push(scriptUrl);
+                 }
+                // css file
+                var cssUrl = "/css/" + elementData.styles;
+                var existingCss = csslist.find(css => css === cssUrl);
+                if (!existingCss) {
+                    var link = document.createElement('link');
+                    link.href = cssUrl;
+                    link.rel = 'stylesheet';
+                    document.head.appendChild(link);
+                    scriptslist.push(cssUrl);
                    
                 }
+            }
              sidebar.appendChild(categoryDiv);      
     }
 }

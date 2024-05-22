@@ -118,6 +118,36 @@
         "editFunction": "editElementFilter",
         "styles": "filter.css",
         "image": "img/filter.png"
+    },
+    "Tab": {
+        "type": "Tab",
+        "description": "Tab",
+        "category": "HTML",
+        "scriptName": "tab.js",
+        "createFunction": "createElementTab",
+        "editFunction": "editElementTab",
+        "styles": "tab.css",
+        "image": "img/tab.png"
+    },
+    "ProgressBar": {
+        "type": "ProgressBar",
+        "description": "Progress Bar",
+        "category": "HTML",
+        "scriptName": "progressBar.js",
+        "createFunction": "createProgressBar",
+        "editFunction": "editProgressBar",
+        "styles": "progressBar.css",
+        "image": "img/progress-bar.png"
+    },
+    "Panel": {
+        "type": "Panel",
+        "description": "Panel",
+        "category": "HTML",
+        "scriptName": "panel.js",
+        "createFunction": "createPanel",
+        "editFunction": "editPanel",
+        "styles": "panel.css",
+        "image": "img/panel.png"
     }
     
 

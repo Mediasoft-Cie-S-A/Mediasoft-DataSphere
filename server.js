@@ -66,13 +66,13 @@ require('./authStatic')(app,session, passport);
 
 
 // Import routes
-require('./formService')(app, client, dbName);
+
 const dblayer = require('./dblayer');
 const dbs= new dblayer(app,session, passport);
 dbs.init();
 
-dbs.generateRoutes(app);
-
+dbs.generateRoutes(app,dbs);
+require('./formService')(app, client, dbs,dbName);
 // Swagger definition
 const swaggerDefinition = {
     openapi: '3.0.0',

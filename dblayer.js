@@ -34,6 +34,8 @@ class dblayer{
         {
             console.log("dblayer constructor");           
             this.dbList = app.config.dblist;
+            this.generateRoutes = this.generateRoutes.bind(this);
+            this.checkAuthenticated = this.checkAuthenticated.bind(this);
             // get key value from dblist           
         }
       
@@ -70,21 +72,29 @@ class dblayer{
     return mapping;
 }
 
-// Function to convert BigInt to string safely
-convertBigIntToString(obj) {
+// Function to safely convert BigInt to int or string
+ convertBigIntToInt(obj) {
     if (Array.isArray(obj)) {
-        return obj.map(item => this.convertBigIntToString(item));
+        return obj.map(item => this.convertBigIntToInt(item));
     } else if (obj && typeof obj === 'object') {
         return Object.fromEntries(
-            Object.entries(obj).map(([key, value]) => [key, typeof value === 'bigint' ? value.toString() : value])
+            Object.entries(obj).map(([key, value]) => {
+                if (typeof value === 'bigint') {
+                    // Convert to a safe integer if possible, otherwise to a string
+                    return [key, (value <= Number.MAX_SAFE_INTEGER && value >= Number.MIN_SAFE_INTEGER)
+                        ? Number(value)
+                        : value.toString()];
+                }
+                return [key, value];
+            })
         );
     }
     return obj;
 }
-
 // Function to execute a query on the appropriate database(s)
-async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
-    const dbRegex = /FROM\s+(?:\w+\.)?(\w+)/gi;
+async  executeQuery(databases,  sqlQuery) {
+    console.log("executeQuery");
+    const dbRegex = /FROM\s+(\w+\.\w+|\w+)/gi;
     const dbMatches = new Set();
     let match;
 
@@ -92,6 +102,7 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
         const tableName = match[1].toLowerCase();
         const dbName = this.tableToDatabaseMapping[tableName];
         if (dbName) {
+            console.log("dbName:"+dbName);
             dbMatches.add(dbName);
         }
     }
@@ -99,10 +110,16 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
     // Execute the query on a single database or handle external joins
     if (dbMatches.size === 1) {
         const db = [...dbMatches][0];
+        console.log("--->db:"+db);
+        
         const conn= databases[db];
+        if (!conn) {
+            throw new Error(`No connection found for database: ${db}`);
+        }
+       
         await conn.connect();
-        console.log("sqlQuery:"+sqlQuery);
-        console.log("db:"+db);
+     //   console.log("sqlQuery:"+sqlQuery);
+     //   console.log("db:"+db);
         const result = await conn.queryData(sqlQuery);
         await conn.close();
         return result;
@@ -111,7 +128,7 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
         const data = {};
 
         for (const dbName of dbMatches) {
-            const query = this.adjustQueryForDb(sqlQuery, dbName);
+            const query = dbs.adjustQueryForDb(sqlQuery, dbName);
             const conn= databases[dbName];
             await conn.connect();            
             data[dbName] = await conn.queryData(query);
@@ -141,7 +158,7 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
     return mergedData;
 }
 
-        generateRoutes(app)
+        generateRoutes(app,dbs)
         {
               /**
          * @swagger
@@ -162,12 +179,17 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
          *       500:
          *         description: Internal Server Error
          */
-        app.get('/table-structure/:database/:tableName', this.checkAuthenticated, async function(req, res) {
+        app.get('/table-structure/:database/:tableName', dbs.checkAuthenticated, async function(req, res) {
             try {
                 
                 const {database, tableName } = req.params;
-                const db= this.databases[database];
-                const structure = await db.getTableStructure(tableName);
+                console.log("table-structure");
+                console.log(database);
+                console.log(tableName);
+               // console.log(dbs);
+                const db= dbs.databases[database];
+                await db.connect();             
+                const structure = await db.getTableFields(tableName);
                 res.json(structure);
                 await db.close();
             } catch (err) {
@@ -189,15 +211,15 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
          *         description: Error retrieving tables list
          */
             
-        app.get('/tables-list', this.checkAuthenticated, async (req, res) => {
+        app.get('/tables-list', dbs.checkAuthenticated, async (req, res) => {
             console.log("tables-list"); 
             try {
                 var outJson={};
-                //console.log(this.dbCache);
+                //console.log(dbs.dbCache);
                 // for each database get the tables list
-                for (const [key, value] of Object.entries(this.dbCache)) {
+                for (const [key, value] of Object.entries(dbs.dbCache)) {
                     console.log("db:"+key);
-                    outJson[key]= this.dbCache[key];
+                    outJson[key]= dbs.dbCache[key];
                 }
                 res.json(outJson);
 
@@ -228,11 +250,11 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
          */
 
             
-        app.get('/table-fields/:database/:tableName',this.checkAuthenticated, async (req, res) => {
+        app.get('/table-fields/:database/:tableName',dbs.checkAuthenticated, async (req, res) => {
             try {
                 console.log("table-fields");
                 const {database, tableName } = req.params;
-                const db= this.databases[database];
+                const db= dbs.databases[database];
                 await db.connect();              
                 const fields = await db.getTableFields(tableName);
                 res.json(fields);
@@ -263,11 +285,11 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
          */
 
 
-        app.get('/table-indexes/:database/:tableName',this.checkAuthenticated, async (req, res) => {
+        app.get('/table-indexes/:database/:tableName',dbs.checkAuthenticated, async (req, res) => {
             try {
                 console.log("table-indexes");
                 const {database, tableName } = req.params;
-                const db= this.databases[database];
+                const db= dbs.databases[database];
                 await db.connect();
                 const indexes = await db.getTableIndexes(tableName);
                 res.json(indexes);
@@ -297,11 +319,11 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
          *         description: Error moving to first record
          */
 
-        app.get('/move-to-first/:database/:tableName', this.checkAuthenticated, async (req, res) => {
+        app.get('/move-to-first/:database/:tableName', dbs.checkAuthenticated, async (req, res) => {
             try {
                 const {database, tableName } = req.params;
                
-                const db= this.databases[database];
+                const db= dbs.databases[database];
                 // Get the fields from the query string. It's a comma-separated string.
                 const fields = req.query.fields ? req.query.fields.split(',') : null;
                 await db.connect();
@@ -334,13 +356,13 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
          *       500:
          *         description: Error moving to last record
          */
-        app.get('/move-to-last/:database/:tableName', this.checkAuthenticated, async (req, res) => {
+        app.get('/move-to-last/:database/:tableName', dbs.checkAuthenticated, async (req, res) => {
             try {
                 const {database, tableName } = req.params;
            
                 // Get the fields from the query string. It's a comma-separated string.
                 const fields = req.query.fields ? req.query.fields.split(',') : null;
-                const db= this.databases[database];
+                const db= dbs.databases[database];
                 await db.connect();
                 const lastRecord = await db.moveToLast(tableName,fields);
                 res.json(lastRecord);
@@ -376,14 +398,14 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
          *       500:
          *         description: Error moving to next record
          */
-        app.get('/move-to-next/:database/:tableName/:currentRowId', this.checkAuthenticated, async (req, res) => {
+        app.get('/move-to-next/:database/:tableName/:currentRowId', dbs.checkAuthenticated, async (req, res) => {
             try {
                 const {database, tableName,currentRowId } = req.params;
               
               
                 // Get the fields from the query string. It's a comma-separated string.
                 const fields = req.query.fields ? req.query.fields.split(',') : null;
-                const db= this.databases[database];
+                const db= dbs.databases[database];
                 await db.connect();
                 const nextRecord = await db.moveToNext(tableName, fields, currentRowId);
                 res.json(nextRecord);
@@ -419,13 +441,13 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
          *       500:
          *         description: Error moving to previous record.
          */
-        app.get('/move-to-previous/:database/:tableName/:currentRowId', this.checkAuthenticated, async (req, res) => {
+        app.get('/move-to-previous/:database/:tableName/:currentRowId', dbs.checkAuthenticated, async (req, res) => {
             try {
                 const {database, tableName,currentRowId } = req.params;
               
                 // Get the fields from the query string. It's a comma-separated string.
                 const fields = req.query.fields ? req.query.fields.split(',') : null;
-                const db= this.databases[database];
+                const db= dbs.databases[database];
                 await db.connect();
                 const previousRecord = await db.moveToPrevious(tableName,fields, currentRowId);
                 res.json(previousRecord);
@@ -436,14 +458,14 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
             } 
         });
         //get record by rowid
-        app.get('/get-record-by-rowid/:database/:tableName/:rowID', this.checkAuthenticated, async (req, res) => {
+        app.get('/get-record-by-rowid/:database/:tableName/:rowID', dbs.checkAuthenticated, async (req, res) => {
             try {
                 const {database, tableName,rowID } = req.params;
               
               
                 // Get the fields from the query string. It's a comma-separated string.
                 const fields = req.query.fields ? req.query.fields.split(',') : null;
-                const db= this.databases[database];
+                const db= dbs.databases[database];
                 await db.connect();
                 const record = await db.getRecordByRowID(tableName,fields, rowID);
                 res.json(record);
@@ -480,11 +502,11 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
          *         description: Error retrieving ROWID.
          */
 
-        app.get('/getROWID/:database/:tableName/:currentRowId', this.checkAuthenticated, async (req, res) => {
+        app.get('/getROWID/:database/:tableName/:currentRowId', dbs.checkAuthenticated, async (req, res) => {
             try {
                 const {database, tableName, currentRowId } = req.params;
               
-                const db= this.databases[database];
+                const db= dbs.databases[database];
                 await db.connect();
                 const nextRecord = await db.getROWID(tableName, currentRowId);
                 res.json(nextRecord);
@@ -533,12 +555,12 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
          *       500:
          *         description: Error updating record.
          */
-        app.put('/update-record/:database/:tableName/:rowID',  this.checkAuthenticated, async (req, res) => {
+        app.put('/update-record/:database/:tableName/:rowID',  dbs.checkAuthenticated, async (req, res) => {
             const { database, tableName, rowID } = req.params;
             const data = req.body; // Assuming the updated data is sent in the request body
             console.log(data);    
             try {
-                const db= this.databases[database];
+                const db= dbs.databases[database];
                 await db.connectWrite();
                 const result = await db.updateRecord(tableName, data, rowID);
                 res.json({ message: 'Record updated successfully', result });
@@ -550,12 +572,12 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
         });
 
         // insert record
-        app.post('/insert-record/:database/:tableName', this.checkAuthenticated, async (req, res) => {
+        app.post('/insert-record/:database/:tableName', dbs.checkAuthenticated, async (req, res) => {
             const {database, tableName } = req.params;
             const data = req.body; // Assuming the updated data is sent in the request body
             console.log(data);    
             try {
-                const db= this.databases[database];
+                const db= dbs.databases[database];
                 await db.connectWrite();
                 const result = await db.insertRecord(tableName, data);
                 res.json({ message: 'Record inserted successfully', result });
@@ -567,11 +589,11 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
         });
 
         //GRID
-        app.get('/table-data/:database/:tableName/:page/:pageSize', this.checkAuthenticated,  async (req, res) => {
+        app.get('/table-data/:database/:tableName/:page/:pageSize', dbs.checkAuthenticated,  async (req, res) => {
             try {
                 
                 const { database, tableName, page, pageSize } = req.params;
-                const db= this.databases[database];
+                const db= dbs.databases[database];
                 await db.connect();
                 
                 // Convert page and pageSize to numbers
@@ -592,12 +614,12 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
 
         //Schema modification
         //Alter table
-        app.post('/alter-table/:database/:tableName', this.checkAuthenticated, async (req, res) => {
+        app.post('/alter-table/:database/:tableName', dbs.checkAuthenticated, async (req, res) => {
             try {
                 await db.connectWrite();
                 const {database, tableName } = req.params;
                 const { action, columnName, columnType, newColumnName, newColumnType } = req.body;
-                const db= this.databases[database];
+                const db= dbs.databases[database];
                 let result;
                 if (action === 'add') {
                     result = await db.alterTable(tableName, columnName, columnType);
@@ -615,10 +637,10 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
             } 
         });
         //Create table  
-        app.post('/create-table/:database/:tableName', this.checkAuthenticated, async (req, res) => {
+        app.post('/create-table/:database/:tableName', dbs.checkAuthenticated, async (req, res) => {
             try {
                 const {database, tableName } = req.params;
-                const db= this.databases[database];
+                const db= dbs.databases[database];
                 await db.connectWrite();
                 
                 const columns = req.body.columns;
@@ -640,10 +662,10 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
         }
 
         //select distinct values for a field
-        app.get('/select-distinct/:database/:tableName/:fieldName', this.checkAuthenticated, async (req, res) => {
+        app.get('/select-distinct/:database/:tableName/:fieldName', dbs.checkAuthenticated, async (req, res) => {
             try {
                 const {database, tableName, fieldName } = req.params;
-                const db= this.databases[database];
+                const db= dbs.databases[database];
                 await db.connect();
                
             
@@ -663,10 +685,10 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
 
         // export table to csv
         // set html mime type in header
-        app.get('/export-table/:database/:tableName', this.checkAuthenticated, async (req, res) => {
+        app.get('/export-table/:database/:tableName', dbs.checkAuthenticated, async (req, res) => {
             try {
                 const {database, tableName} = req.params;
-                const db= this.databases[database];
+                const db= dbs.databases[database];
                 await db.connect();
        
                 const fields = req.query.fields ? req.query.fields.split(',') : null;
@@ -683,14 +705,14 @@ async  executeQuery(databases, tableToDatabaseMapping, sqlQuery) {
         });
 
         // return json passing sql query
-        app.get('/query/:sqlQuery', this.checkAuthenticated, async (req, res) => {
+        app.get('/query/:sqlQuery', dbs.checkAuthenticated, async (req, res) => {
             try {
                 const { sqlQuery } = req.params;
                 const decodedQuery = decodeURIComponent(sqlQuery);
-        
+                console.log(sqlQuery);
                 // Execute the query and return the result
-                const result = await this.executeQuery(this.databases, this.tableToDatabaseMapping, decodedQuery);
-                const safeResult = this.convertBigIntToString(result);
+                const result = await dbs.executeQuery(dbs.databases, decodedQuery);
+                const safeResult = dbs.convertBigIntToInt(result);
                 res.json(safeResult);
                 
             } catch (err) {

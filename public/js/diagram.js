@@ -13,1017 +13,435 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let ERDTables = {};
+let ERDLinks = [];
+let scale = 1;
+let draggingTable = null;
+let draggingField = null;
+let draggingTableName = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+let mouseX = 0;
+let mouseY = 0;
 
+canvas.addEventListener('mousedown', onMouseDown);
+canvas.addEventListener('mousemove', onMouseMove);
+canvas.addEventListener('mouseup', onMouseUp);
+canvas.addEventListener('contextmenu', onRightClick);
+canvas.addEventListener('mouseleave', onMouseLeave);
 
-var isTableDragging = false;
-var isFieldDragging = false;
-var tableObject = null;
-var fieldObject = null;
-var svgLine = null;
-var xOffset = 0;
-var yOffset = 0;
+canvas.addEventListener('contextmenu', function(e) {
+    e.preventDefault();  // Prevent the default context menu
 
-// Datasets array
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
-// define global variables
-var globalDataSets =[];
-var fieldsArray=[];
-var typeArray=[];
+    // Display the context menu
+    const menu = document.getElementById('contextMenu');
+    menu.style.display = 'block';
+    menu.style.left = `${e.clientX}px`;
+    menu.style.top = `${e.clientY}px`;
 
-    // startup
+    // Optional: Identify if clicking on a table or link to enable/disable menu items
+    const table = findTableAtPosition(x, y);
+    const link = findLinkAtPosition(x, y);
 
-    
+    document.getElementById('add-relation').style.display = table ? 'block' : 'none';
+    document.getElementById('delete-table').style.display = table ? 'block' : 'none';
+    document.getElementById('delete-link').style.display = link ? 'block' : 'none';
 
-        var mime = 'text/x-sql';
-        // get mime type
-       
-        window.editor = CodeMirror.fromTextArea(document.getElementById('QueryBarBodyBodyTextArea'),
-                                             {
-                                                mode: mime,
-                                                indentWithTabs: true,
-                                                smartIndent: true,
-                                                lineNumbers: false,
-                                                matchBrackets : true,
-                                                autofocus: true,
-                                                autocorrect: true,
-                                                spellcheck: true,
-                                                extraKeys: {"tab": "autocomplete"},
-                                                hintOptions: {tables: {
-                                                    
-                                                }}
-                                                });
-       // set editor size to fill the parent div
-        window.editor.setSize("800px", "100%");
-        window.editor.on("change", 
-                        function() {
-                                 window.editor.save();
-                                  });
+    // Set actions for menu items
+    document.getElementById('add-relation').onclick = function() { addRelation(table); };
+    document.getElementById('delete-table').onclick = function() { deleteTable(table); };
+    document.getElementById('delete-link').onclick = function() { deleteLink(link); };
+});
 
-    console.log('editor:', window.editor);
-// createTable list for the database editor
-function createTableListDb() {
-   
-    // get id of the div
-    const list = document.getElementById('tableListBar');
-    // get list of tables   
-    fetchTablesList(list);
-    
+// Hide context menu on click anywhere on the page
+window.addEventListener('click', function() {
+    document.getElementById('contextMenu').style.display = 'none';
+});
 
-}
+canvas.addEventListener('dragover', function(ev) {
+    ev.preventDefault();  // Allow the drop
+});
 
-function dropInputTable(event)
-{
-    event.preventDefault();
-    console.log("dropInputTable");
-    console.log( event.dataTransfer);
-    var elementId = event.dataTransfer.getData("text");
-    console.log("elementId:"+elementId);
-    event.target.value=elementId;
-    // generate the table diagram
-    generateTableDiagram(elementId);
-}
+canvas.addEventListener('drop', function(ev) {
+    ev.preventDefault();
+    console.log('Dropped:', ev.dataTransfer.getData("text/plain"));
+    const data = JSON.parse(ev.dataTransfer.getData("text/plain"));
+    fetchTableStructure(data.database, data.table, ev.clientX, ev.clientY);
+});
 
-
-function generateTableDiagram(elementId)
-{
- //get the element 
-    var element=document.getElementById(elementId);
-    // get the db name  
-    var dbName=element.getAttribute('data-db-name');
-    // get the table name
-    var tableName=element.getAttribute('data-table-name');
-    // get the table label
-    var tableLabel=element.getAttribute('data-table-label');
-    // get DBdiagram div
-    var DBdiagram = document.getElementById('DBdiagram');
-    // remove all child nodes
-
-    createTableDiagram(tableName,tableLabel);
-    // get the table fields and inser it in array
-    var tableFields=[];
-    fetch(`/table-fields/${dbName}/${tableName}`)
-    .then(response => response.json())
-    .then(fields => {
-        console.log('fields:', fields);
-        createFieldsDiagram(0,50,tableName,fields);
-    })
-    .catch(error => console.error('Error:', error));
-    // get the table indexes and insert it in array
-    var tableIndexes=[];
-  /*  fetch(`/table-indexes/${tableName}`)
-    .then(response => response.json())
-    .then(indexes => {
-        indexes.forEach(index => {
-            tableIndexes.push(index);
-        });
-    })
-    .catch(error => console.error('Error:', error)); */
-   //create the table diagram
-
-   
-}
-  
-
-
-
-function createTableDiagram( tableName, description) {
-    // generate sequence of color for the text, rect and line and background
-   
-   // get the SVGDiagram image div
-    var svgDiagram = document.getElementById('svgDiagram');
- 
-    // caluculate the table width and height
-    var tableWidth = 0;
-    var tableHeight = 0;
-    const rowHeight = 30;
-    const colWidth = 100;
-    // calculate the table width
-    tableWidth = tableName.length * 10;
-    if (description)
-    {
-        if (description.length * 5 > tableWidth) {
-            tableWidth = description.length * 5;
-        }
-    }
-   // create table group
-   tableGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-   tableGroup.setAttribute('id', "Table_"+tableName);
-   tableGroup.setAttribute('x', 0);
-    tableGroup.setAttribute('y', 0);
- 
-    // calculate the table height   
-    tableHeight = 50;
-    // create the table
-    var table = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-    table.setAttribute('tagName', 'Table');
-    table.setAttribute('data-table-name', tableName);
-    table.setAttribute('data-table-label', description);
-    table.setAttribute('x', 0);
-    table.setAttribute('y', 0);
-    table.setAttribute('width', tableWidth);
-    table.setAttribute('height', tableHeight);
-    table.setAttribute('style', 'fill:rgb(200,255,255);stroke-width:1;stroke:rgb(0,0,0)');
-    table.setAttribute('id', "Rect_"+tableName);
-    // adding shadow
-    table.setAttribute('filter', 'url(#drop-shadow)');
-
-    tableGroup.appendChild(table);
-    // create the table name
-    var tableNameText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    tableNameText.setAttribute('x', 5);
-    tableNameText.setAttribute('y', 20);
-    tableNameText.setAttribute('fill', 'black');
-    tableNameText.setAttribute('font-size', '15');
-    tableNameText.textContent = tableName;
-    tableGroup.appendChild(tableNameText);
-    // create the table description
-    var tableDescriptionText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    tableDescriptionText.setAttribute('x', 5);
-    tableDescriptionText.setAttribute('y', 35);
-    tableDescriptionText.setAttribute('fill', 'black');
-    tableDescriptionText.setAttribute('font-size', '10');
-    tableDescriptionText.textContent = description;
-    tableGroup.appendChild(tableDescriptionText);
-    // for each fields create a  rect and text
-    svgDiagram.appendChild(tableGroup);
-    
-  }
-
-  function tableMouseDown(e)  {
-    e.preventDefault();
-    if (e.target.getAttribute('tagName') === 'Table') {
-        isTableDragging = true;
-        isFieldDragging = false;
-        // get the parent of the rect <g> element
-        tableObject = e.target.parentNode;
-        // select the objet and set border to red with lightblue background
-        e.target.setAttribute('style', 'stroke:rgb(255,0,0);stroke-width:2;fill:rgb(200,200,255)');
-        // get table name from the rect
-        tableName = e.target.getAttribute('data-table-name');
-       
-      
-        xOffset = e.clientX - parseFloat(tableObject.getAttribute('x'));
-        yOffset = e.clientY - parseFloat(tableObject.getAttribute('y'));
-        fieldObject = null;
-        svgLine = null;
-    }
-    if (e.target.getAttribute('tagName') === 'Field') {
-        fieldObject = e.target;
-        isFieldDragging = true;
-        isTableDragging = false;
-        xOffset = e.clientX - parseFloat(e.target.getAttribute('x'));
-        yOffset = e.clientY - parseFloat(e.target.getAttribute('y'));
-        tableObject = null;
-    }
-}
-
-  function tableMouseMove(e) {
-    e.preventDefault();
-    if (isTableDragging) {
-      
-        var x = e.clientX - xOffset;
-        var y = e.clientY - yOffset;
-        // get current position of the svgDiagram
-         var cx= parseFloat(tableObject.getAttribute('x'))-x;
-         var cy= parseFloat(tableObject.getAttribute('y'))-y;
-         tableObject.setAttribute('x', x);
-         tableObject.setAttribute('y', y);
-        
-            //     console.log('tableMouseMove - '+ ' x:' + x + ' y:' + y + ' cx:' + cx + ' cy:' + cy);
-        moveChildElements(tableObject, cx, cy  );
-     
-       }
-    if (isFieldDragging) {
-       
-        var svgDiagram = document.getElementById('svgDiagram');
-        var x = parseFloat( fieldObject.getAttribute('x'))+parseFloat(fieldObject.getAttribute('width'))-30;
-        var y = parseFloat( fieldObject.getAttribute('y'))+parseFloat(fieldObject.getAttribute('height'))/2;
-        var cx = e.clientX -svgDiagram.getBoundingClientRect().left;
-        var cy = e.clientY -svgDiagram.getBoundingClientRect().top;
-       createLink(fieldObject, x,y,cx,cy);
-    }
-  }
-
-  function tablemMuseUP(e) {
-    e.preventDefault();
-    var svgDiagram = document.getElementById('svgDiagram');
-    if (e.target.getAttribute('tagName') === 'Field' && e.target.id !=fieldObject.id ) {
-        // elimite the light border and background
-       
-        var x = parseFloat( fieldObject.getAttribute('x'))+parseFloat(fieldObject.getAttribute('width'))-30;
-        var y = parseFloat( fieldObject.getAttribute('y'))+parseFloat(fieldObject.getAttribute('height'))/2;
-        var targetFiled = e.target;
-        var cx=parseFloat(targetFiled.getAttribute('x'))+30;
-        var cy=parseFloat(targetFiled.getAttribute('y'))+parseFloat(targetFiled.getAttribute('height'))/2;
-        var id="Link_"+fieldObject.id+"."+targetFiled.id;
-        createZLink(id,fieldObject.id,targetFiled.id, x,y,cx,cy);
-        fieldObject.setAttribute('link', id);
-        targetFiled.setAttribute('link', id);
-         // get the first rect
-         var rect=fieldObject.querySelector('rect');
-         // set the border to default
-         rect.setAttribute('style', 'fill:rgb(200,255,255);stroke-width:1;stroke:rgb(0,0,0)');
-        if(svgLine)
-        {
-          svgDiagram.removeChild(svgLine);
-        }
-    }else
-    {
-        // remove svgLine
-    
-      if(svgLine)
-      {
-        svgDiagram.removeChild(svgLine);
-      }
-    }
-    isTableDragging = false;
-    isFieldDragging = false;
-    tableObject = null;
-    fieldObject = null;
-    svgLine = null;
-  }
-
-  function tableMouseLeave(e) {
-    var tableName = "Table_" + tableName;
-  isTableDragging = false;
-    isFieldDragging = false;
- }
-
- function createLink(field, x, y,cx,cy) {
-    
-    var svgDiagram = document.getElementById('svgDiagram');
-     svgLine=  document.getElementById('svgLine'+field.id);
-    if (svgLine === null) {
-        svgLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        svgLine.id = "svgLine" + field.id;
-        svgDiagram.appendChild(svgLine);
-        svgLine.setAttribute('style', 'stroke:rgb(255,255,0);stroke-width:2');
-    }
-    svgLine.setAttribute('x1', x);
-    svgLine.setAttribute('y1', y);
-    svgLine.setAttribute('x2', cx);
-    svgLine.setAttribute('y2', cy);
-   
-   
-    field.setAttribute('link', svgLine.id);
-  }
-
-  function createZLink(id, sourceID,targetID, x, y, cx, cy) {
-    console.log('createZLink');
-    var svgDiagram = document.getElementById('svgDiagram');
-
-    // Calculate intermediate points for Z shape
-    const midX1 = (x + cx) / 2;
-    const midY1 = y;
-    const midX2 = midX1;
-    const midY2 = cy;
-
-    // Create polyline for Z shape
-    const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-    const points = `${x},${y} ${midX1},${midY1} ${midX2},${midY2} ${cx},${cy}`;
-    polyline.setAttribute('points', points);
-    polyline.setAttribute('stroke', 'black');
-    polyline.setAttribute('fill', 'none');
-    polyline.setAttribute('sourceID', sourceID);
-    polyline.setAttribute('targetID', targetID);
-    polyline.setAttribute('stroke-width','2px');
-    polyline.id =  id;
-    svgDiagram.appendChild(polyline);
-    // generate the sql query
-    generateSQLByEditFields();
-    
-}
-
-  function createFieldsDiagram(x,y,tableName,fields)
-  {
- 
-    // get svgDiagram
-    var svgDiagram = document.getElementById('svgDiagram');
-    const tableGroup = svgDiagram.querySelector("#Table_"+tableName);
-   
-    // get first table rect
-    const tableRect = tableGroup.querySelector("rect");
-   
-    var tableWidth = parseInt( tableRect.getAttribute('width'));
-    var tableHeight = parseInt( tableRect.getAttribute('height'));
- 
-    const rowHeight = 50;
-    const colWidth = 10;
-    y=tableHeight;
-
-   //generate field structure and calculate the table width
-   tableFields=[];
-  
-    fields.forEach(field => {
-       
-        const desc=field.NAME + ' (' + field.TYPE.substring(0,4) + ')';
-        tableFields.push(desc);
-        if (desc.length * colWidth > tableWidth) {
-            tableWidth = desc.length * colWidth;
-        }
-        if (field.LABEL)
-        {
-            if (field.LABEL.length * colWidth > tableWidth) {
-                tableWidth = field.LABEL.length * colWidth;
-            }
-        }
-    }
-    );
-  //  console.log(sqlEditorTable);
-    // set SQL Editor table
-   
-
-    // calculate the table height
-    tableHeight = 30+ fields.length * rowHeight;
-    // update the table rectfield
-    tableRect.setAttribute('width', tableWidth);
-    tableRect.setAttribute('height', tableHeight);
-    // update the table name
-    var i=0;
-    
-
-    tableFields.forEach(field => {
-        // create the field rect
-        var fieldRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        fieldRect.setAttribute('tagName', 'Field');
-        fieldRect.setAttribute('data-table-name', tableName);
-        fieldRect.setAttribute('data-table-field',  fields[i].NAME);
-        fieldRect.id="Rect_"+tableName+"."+fields[i].NAME;
-        fieldRect.setAttribute('x', x);
-        fieldRect.setAttribute('y', y + 50 + i * rowHeight);
-        fieldRect.setAttribute('width', tableWidth);
-        fieldRect.setAttribute('height', rowHeight);    
-    
-        if (i % 2 == 0) {
-              fieldRect.setAttribute('style', 'fill:rgb(255,200,255);stroke-width:1;stroke:rgb(0,0,0)');
-        }
-        else {
-             fieldRect.setAttribute('style', 'fill:rgb(255,220,255);stroke-width:1;stroke:rgb(0,0,0)');
-        }
-        // create the field name
-        var fieldNameText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        fieldNameText.setAttribute('x', x + 5);
-        fieldNameText.setAttribute('y', y + 50 + i * rowHeight + 20);
-        fieldNameText.setAttribute('fill', 'black');
-        fieldNameText.setAttribute('font-size', '10');
-        fieldNameText.innerHTML = field;
-        // crete the field description
-        var fieldDescriptionText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        fieldDescriptionText.setAttribute('x', x + 5);
-        fieldDescriptionText.setAttribute('y', y + 50 + i * rowHeight + 35);
-        fieldDescriptionText.setAttribute('fill', 'black');
-        fieldDescriptionText.setAttribute('font-size', '10');
-        fieldDescriptionText.textContent = fields[i].LABEL;
-
-        
-        // append the field rect and text to the table
-        
-        tableGroup.appendChild(fieldRect);
-        tableGroup.appendChild(fieldNameText);
-        tableGroup.appendChild(fieldDescriptionText);
-       // y+=rowHeight;
-        i++;
-    });
-
-    // if selecte language is SQL generate the SQL query
-    // get value of select language
-    var language = document.getElementById('language').value;
-   
-    editTableFieldList(language);
-   
-  }
-
-  function moveChildElements(element, cx, cy) {
-  //   console.log('element:', element);
-     for (var i=0; i<element.childNodes.length; i++)
-     {
-            var child=element.childNodes[i];          
-          
-            try
-            {
-                if (child)
-                {
-                    var x= parseInt( child.getAttribute('x'))-cx;
-                    var y= parseInt( child.getAttribute('y'))-cy;
-                    // set new position of the child                
-                
-                    child.setAttribute('x', x);
-                    child.setAttribute('y', y);
-                    moveChildElements(child, cx, cy);
-                    // get the link
-                    var link=child.getAttribute('link');
-                    if (link)
-                    {
-                        console.log('link:', link);
-                       // move the link calculate if it's a line or polyline
-                       var line = document.getElementById(link);
-                         console.log('line:', line);
-                            if (line)
-                            {
-
-                                 // get source and target
-                                    var sourceID=line.getAttribute('sourceID');
-                                    var targetID=line.getAttribute('targetID');
-                                    var source=document.getElementById(sourceID);
-                                    var target=document.getElementById(targetID);
-                                    var x=parseFloat(source.getAttribute('x'))+parseFloat(source.getAttribute('width'))-30;
-                                    var y=parseFloat(source.getAttribute('y'))+parseFloat(source.getAttribute('height'))/2;
-                                    var cx=parseFloat(target.getAttribute('x'))+30;
-                                    var cy=parseFloat(target.getAttribute('y'))+parseFloat(target.getAttribute('height'))/2;
-                                    // calculate intermediate points for Z shape
-                                    var midX1 = (x + cx) / 2;
-                                    var midY1 = y;
-                                    var midX2 = midX1;
-                                    var midY2 = cy;
-                                    // create polyline for Z shape
-                                    var points=x+","+y+" "+midX1+","+midY1+" "+midX2+","+midY2+" "+cx+","+cy;
-                                    // set the new points
-                                    line.setAttribute('points', points);
-                                    
-                              
-                            }
-                    }
-                }
-            }catch(err)
-            {
-                console.log('err:', err);
-            }
-        }
-    }
-  
-
-function zoom(event)
-{
-  
-    var svgDiagram = document.getElementById('svgDiagram');
-   // var scale = parseFloat(svgDiagram.getAttribute('scale'));
-   scale=parseFloat(event.target.value/200);
-    svgDiagram.setAttribute('scale', scale);
-    svgDiagram.style.transform = "scale(" + scale + ")";
-    svgDiagram.style.transformOrigin = "0 0";
-}
-
-// excecute the query /query/:sqlQuery fetch max 20 rows
-function executeQuery(updateDS)
-{
-    var sqlQuery=window.editor.getValue();  
-    var url = '/query/'+sqlQuery;
+function fetchTableStructure(database, table, x, y) {
+    const url = `/table-structure/${database}/${table}`;
     fetch(url)
-    .then(response => response.json())
-    .then(data => {
-            
-        var tableBody = document.getElementById('QueryResultTable');
-       tableBody.innerHTML="";
-        // create table header
-        var tableHeader = document.createElement('tr');
-        tableHeader.setAttribute('class', 'tableHeader');
-        tableBody.appendChild(tableHeader);
-        // the json data is an array of object
-        // get the first object to get the header
-        // check if the data is an array
-        if (Array.isArray(data))
-        {
-            if (data.length>0)
-            {
-                var firstObject=data[0];
-                // get the header
-                var header=Object.keys(firstObject);
-                // create table header
-                header.forEach(field => {
-                    var th = document.createElement('th');
-                    th.textContent = field;
-                    tableHeader.appendChild(th);
-                    // add field to fields array;
-                    fieldsArray.push(field );
-                    // get the type of the field passing the value
-                    typeArray.push(getType(firstObject[field]));
-                });
-                // create table rows
-                data.forEach(row => {
-                    var tr = document.createElement('tr');
-                    tableBody.appendChild(tr);
-                    // get the row data
-                    var rowData=Object.values(row);
-                    rowData.forEach(field => {
-                        var td = document.createElement('td');
-                        td.textContent = field;
-                        tr.appendChild(td);
-                    });
-                });
-                if (updateDS)
-                {
-                    // get the query name
-                    var datasetName=document.getElementById('DataSetName').value;
-                    // save the query in the datasets array
-                    globalDataSets[datasetName]={ query: window.editor.getValue(), fields: fieldsArray, types: typeArray, datasetName: datasetName};
-                    saveDataset();
-                } 
-            }
-        }
-        else
-        {
-            var tr = document.createElement('tr');
-            tableBody.appendChild(tr);
-            // get the row data
-            var rowData=Object.values(data);
-            rowData.forEach(field => {
-                var td = document.createElement('td');
-                td.textContent = field;
-                tr.appendChild(td);
-            });
-        }
-    })
-    .catch(error => console.error('Error:', error));
-}
-
-function saveQuery()
-{
-    // execute the query
-    executeQuery(true);
-    
-
-   // showToast("Query saved successfully");
-}
-
-function getType(field)
-{
-    console.log('field:', field);
-   console.log('field:', !isNaN(parseFloat(field)));
-    // Check if it's a valid number
-    if (!isNaN(parseFloat(field))) {
-        return 'number';
-    }
-
-    // Check if it's a valid date
-    const date = new Date(field);
-    if (!isNaN(date.getTime())) {
-        return 'date';
-    }
-
-    // If it's neither, then it's a regular string
-    return 'string';
-}
-
-// save the dataset in the database with '/storeDataset' endpoint
-function saveDataset()
-{
-   
-    // using datasets array
-    // map   dataset key values
-    for (var dataset in globalDataSets)
-    {
-       
-        ds={
-            query: globalDataSets[dataset].query,
-            // convert the array to json string array with JSON.stringify
-            fields: globalDataSets[dataset].fields,
-            types: globalDataSets[dataset].types,                       
-            datasetName: globalDataSets[dataset].datasetName,
-            diagram: elementToJson(document.getElementById('svgDiagram'))
-        }
-        // post the dataset to the server with '/storeDataset' endpoint
-      
-       console.log('ds:', ds);
-        fetch('/storeDataset', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-           
-            body: JSON.stringify(ds)
-        }).then(response => response.json())
+        .then(response => response.json())
         .then(data => {
-           showToast('Success:'+data.message, 5000); // Show toast for 5 seconds
+            drawTableAtPosition( database,table, data, x, y);
         })
-        .catch((error) => {
-           showToast('Error! ' + error, 5000); // Show toast for 5 seconds
-            console.error('Error:', error);
-        });
-
-        updateDataset(ds);
-    }
+        .catch(error => console.error('Failed to fetch table structure:', error));
 }
 
-// update Data of dataset in the database with '/storeDataset' endpoint
-function updateDataset(ds)
-{
-  
-       // store the dataset with storeDatasetData
-       const datasetDataPost = {
-        datasetName: ds.datasetName,
-        sqlQuery: ds.query,
-        userCreated: 'internal',
-        userModified: 'internal',
-        modificationDate: new Date(),
-        creationDate: new Date()
-       };
-         console.log('datasetDataPost:', datasetDataPost);
-        // post the dataset to the server with '/storeDatasetData' endpoint
-        fetch('/storeDatasetData', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(datasetDataPost)
-        }).then(response => response.json())
-        .then(data => {
-            console.log('data:', data);
-            showToast('Success:'+data.message, 5000); // Show toast for 5 seconds
-        })
-        .catch((error) => {
-            showToast('Error! ' + error, 5000); // Show toast for 5 seconds
-            console.error('Error:', error);
-        });
-
-      
-  
+function drawTableAtPosition(database,table,tableData, x, y) {
+    // Assume tableData contains fields and other necessary info
+    // Convert fetched data to suit the createTableDiagram parameters if needed
+    const inputTableData = {
+        tableName: table,
+        tableLabel: 'Fetched Table',
+        databaseName: database,
+        fields: tableData.map(field => ({
+            NAME: field.NAME,
+            LABEL: field.LABEL,
+            TYPE: field.TYPE  // Adjust according to actual data structure
+        }))
+    };
+    console.log('Fetched table data:', inputTableData);
+    createTableDiagram(x - 100, y - 50, inputTableData);  // Adjust x, y to center the table
 }
 
-function createTableList(list,datasets) {
-   
-    list.innerHTML = '';
-    // add new table button
-  
-   // read the datasets keys
-    for (var key in datasets) {
-        
-        if (datasets.hasOwnProperty(key)) {
-            const listItem = document.createElement('div');
-            listItem.classList.add('table-item');
-            listItem.innerText = key; // Adjust based on your API response
-            listItem.setAttribute('data-table-name', key);
-            listItem.setAttribute('data-table-label', key);
-            listItem.setAttribute("draggable","true");
-            listItem.setAttribute("ondragstart","drag(event)");
-            listItem.setAttribute("query",datasets[key].query);
-            listItem.setAttribute("fields",datasets[key].fields);
-            listItem.setAttribute("types",datasets[key].types);
-            listItem.classList.add('draggable');
-            listItem.id=key;
-            listItem.addEventListener('click', function(event) {
-                event.preventDefault();
-                
-                // get the label count;
-                var labels=event.target.querySelectorAll("label");
-                if (labels.length>0)
-                {
-                for (var k=0;k<labels.length;k++)
-                        {
-                            event.target.removeChild(labels[k]);
-                        }
-                    }
-                     else   if (event.target.classList.contains('table-item') ) {
-                    // get the search filter value
-                    var searchFilter = document.getElementById('dataSetSearchFilter').value.toLowerCase();
-                    console.log(searchFilter);
-
-                    fields= event.target.getAttribute('key');
-                    const tableName = event.target.getAttribute('data-table-name');
-                    const tableLabel = event.target.getAttribute('data-table-label');
-                    // get the table fields
-                    fields= event.target.getAttribute('fields').split(',');
-                    types= event.target.getAttribute('types').split(',');
-                    query= event.target.getAttribute('query');
-                    fields.forEach((field,index) => {
-                        // check filter and fields
-                        if (field.toLowerCase().indexOf(searchFilter)>-1 || searchFilter.length==0)
-                        {
-                         
-                        var newColumn= document.createElement('label');
-                        // newColumn with field icon + field name
-                        newColumn.innerHTML='<i class="fas fa-columns"></i>'+field;
-                        newColumn.id=tableName+"."+field;
-                        newColumn.setAttribute("draggable","true");
-                        newColumn.setAttribute("ondragstart","drag(event)");
-                        newColumn.classList.add('draggable');
-                        newColumn.setAttribute("dataType",types[index]);
-                        newColumn.setAttribute("query",query);
-                        newColumn.setAttribute('data-table-name', tableName);
-                        event.target.appendChild(newColumn);
-                        }
-                    });
-                        
-                    
-
-                }
-            });
-
-            list.appendChild(listItem);
-           
+function findTableAtPosition(x, y) {
+    // Iterate throughERDTables to find one at the given position
+    for (let tableName in ERDTable) {
+        const table = ERDTable[tableName];
+        if (x >= table.x && x <= table.x + table.width && y >= table.y && y <= table.y + table.height) {
+            return table;
         }
     }
-   
-   // fetchTablesList(list);
+    return null;
+}
+
+function findLinkAtPosition(x, y) {
+    // Placeholder for actual link position checking logic
+    return null;  // Implement based on how you store and manage ERDLinks
+}
+
+function addRelation(table) {
+    console.log('Adding relation to:', table.tableName);
+    // Implement relation adding logic
+}
+
+function deleteTable(table) {
+    console.log('Deleting table:', table.tableName);
+    delete ERDTable[table.tableName];
+    drawAll();  // Redraw canvas after deletion
+}
+
+function deleteLink(link) {
+    console.log('Deleting link:', link);
+    const index = ERDLinks.indexOf(link);
+    if (index > -1) {
+        ERDLinks.splice(index, 1);
+    }
+    drawAll();  // Redraw canvas after deletion
+}
+
+
+function setZoom(newScale) {
+    scale = parseFloat(newScale);
+    drawAll();
+}
+
+function clearCanvas() {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.scale(scale, scale);
+}
+
+function drawAll() {
+    clearCanvas();
     
- 
+    for (const tableName in ERDTables) {
+        const table = ERDTables[tableName];
+        createTableDiagram(table.x, table.y, table);
+    }
+    drawLinks();
+    editTableFieldList("SQL",ERDTables,ERDLinks);
+}
 
-}   
 
-function dataSetSearchField()
-{
-    // get the list of datasets div
-    var dataSetsList=document.getElementById("tablesList").querySelectorAll('.table-item');
-    console.log(dataSetsList)
-    // for each item in the list simulate click
-    dataSetsList.forEach(dataset => {
-        dataset.click();
+
+function createTableDiagram(x, y, { tableName, tableLabel, databaseName, fields }) {
+    const padding = 10;
+    const rowHeight = 60;  // Updated row height, doubled from previous 30px to 60px
+    const borderRadius = 5;
+
+    // Calculate the width based on the longest field label to ensure all text fits
+    const longestField = fields.reduce((max, field) => {
+        const fieldName = `${field.NAME} (${field.TYPE})`;
+        const fieldLabel = `${field.LABEL} `;
+        const textWidth = Math.max(ctx.measureText(fieldLabel).width,ctx.measureText(fieldName).width);
+        return Math.max(max, textWidth);
+    }, 0);
+
+    const tableWidth = Math.max(200, longestField + 2 * padding);
+    const tableHeight = 70 + fields.length * rowHeight + 20;  // Adjust the table height based on new row height
+
+    ERDTables[tableName] = { x, y, width: tableWidth, height: tableHeight, tableName, tableLabel, databaseName, fields };
+
+    // Create a linear gradient for the entire table
+    const tableGradient = ctx.createLinearGradient(x, y, x, y + tableHeight);
+    tableGradient.addColorStop(0, '#1E90FF');  // Start color (lighter blue)
+    tableGradient.addColorStop(1, '#4169E1');  // End color (darker blue)
+
+    // Add shadow for depth
+    ctx.shadowOffsetX = 5;
+    ctx.shadowOffsetY = 5;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = 'rgba(0,0,0,0.2)';
+
+    // Rounded corners rectangle for the whole table
+    ctx.beginPath();
+    ctx.moveTo(x + borderRadius, y);
+    ctx.arcTo(x + tableWidth, y, x + tableWidth, y + tableHeight, borderRadius);
+    ctx.arcTo(x + tableWidth, y + tableHeight, x, y + tableHeight, borderRadius);
+    ctx.arcTo(x, y + tableHeight, x, y, borderRadius);
+    ctx.arcTo(x, y, x + tableWidth, y, borderRadius);
+    ctx.closePath();
+
+    ctx.fillStyle = tableGradient;
+    ctx.fill();
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Reset shadow to avoid affecting other elements
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.shadowBlur = 0;
+
+    // Drawing the table and database name on separate lines
+    ctx.font = 'bold 15px Arial';
+    ctx.fillStyle = 'white';
+    ctx.fillText(tableName, x + padding, y + 25);
+    ctx.font = '12px Arial';
+    ctx.fillText(`(${databaseName})`, x + padding, y + 45);
+
+    // Drawing each field with labels on separate lines
+    fields.forEach((field, index) => {
+        const fieldY = y + 70 + index * rowHeight; // Adjusted Y position for header and fields
+        ctx.fillStyle = index % 2 === 0 ? '#F8F8FF' : '#E6E6FA';
+        ctx.fillRect(x, fieldY, tableWidth, rowHeight);
+
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 12px Arial';
+        ctx.fillText(field.NAME +" (" + field.TYPE+")", x + padding, fieldY + 20);
+        ctx.font = 'italic 12px Arial';
+        ctx.fillText(`${field.LABEL}`, x + padding, fieldY + 40);  // Adjusted text position for new row height
+    });
+}
+
+
+
+
+function createZLink(sourceTableName, sourceFieldIndex, targetTableName, targetFieldIndex) {
+    ERDLinks.push({
+        sourceTableName,
+        targetTableName,
+        sourceFieldIndex,
+        targetFieldIndex
+    });
+    drawAll();
+}
+
+function drawLinks() {
+    ctx.shadowOffsetX = 3;
+    ctx.shadowOffsetY = 3;
+    ctx.shadowBlur = 5;
+    ctx.shadowColor = 'rgba(50, 50, 150, 0.5)';  // Soft blue shadow for a glowing effect
+
+    ERDLinks.forEach(link => {
+        const sourceTable = ERDTables[link.sourceTableName];
+        const targetTable = ERDTables[link.targetTableName];
+        const sourceField = sourceTable.fields[link.sourceFieldIndex];
+        const targetField = targetTable.fields[link.targetFieldIndex];
+
+        const sourceX = sourceTable.x + sourceTable.width;  // Start right of the source table
+        const sourceY = sourceTable.y + 50 + link.sourceFieldIndex * 60 + 30;  // Middle of the row height
+        const targetX = targetTable.x;  // Start at the left side of the target table
+        const targetY = targetTable.y + 50 + link.targetFieldIndex * 60 + 30;  // Middle of the row height
+
+        const midX = (sourceX + targetX) / 2;  // Midpoint for Z-shape
+
+        // Draw the Z-shaped line
+        ctx.beginPath();
+        ctx.moveTo(sourceX, sourceY);
+        ctx.lineTo(midX, sourceY);  // Horizontal from source to mid
+        ctx.lineTo(midX, targetY);  // Vertical line down/up to target Y
+        ctx.lineTo(targetX, targetY);  // Horizontal to target
+
+        ctx.strokeStyle = '#4169E1';  // Royal blue for link lines
+        ctx.lineWidth = 4;  // Thicker line for better visibility
+        ctx.stroke();
+
+        // Draw balls at junctions
+        ctx.fillStyle = 'yellow';  // Bright color for visibility
+        ctx.beginPath();
+        ctx.arc(midX, sourceY, 5, 0, 2 * Math.PI);  // Ball at the horizontal junction
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(midX, targetY, 5, 0, 2 * Math.PI);  // Ball at the vertical junction
+        ctx.fill();
+
+        // Text for field names at the ends
+        ctx.fillStyle = 'black';
+        ctx.font = 'bold 12px Arial';
+        ctx.fillText(sourceField.fieldLabel, sourceX + 5, sourceY + 5);  // Source field label
+        ctx.fillText(targetField.fieldLabel, targetX - ctx.measureText(targetField.fieldLabel).width - 5, targetY + 5);  // Target field label
     });
 
+    // Reset shadow to avoid affecting other elements
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.shadowBlur = 0;
 }
 
-// get all the datasets from the database with '/getAllDatasets' endpoint
-function getDatasets()
-{
-    
-    console.log('getDatasets');
-    fetch('/getAllDatasets')
-    .then(response => response.json())
-    .then(datasets => {
-        var options = [];
-        datasets.forEach(dataset => {
-            // add the dataset to the datasets array
-            console.log('dataset:', dataset);
-          
-            globalDataSets[dataset.datasetName]={ 
-                query: dataset.query, 
-                fields: dataset.fields, 
-                types: dataset.types, 
-                datasetName: dataset.datasetName,
-                diagram: dataset.diagram};
-                // init combo
-                options.push(dataset.datasetName);
-                createTableList(document.getElementById('tablesList'),globalDataSets);  
-               });
-               var datasetList= document.getElementById('DataSetList');
-               console.log('datasetList:', datasetList);
-                datasetList.innerHTML="";
-                options.forEach(option => {
-                    var opt = document.createElement('option');
-                    opt.value = option;
-                    opt.textContent = option;
-                    datasetList.appendChild(opt);
-                    console.log('opt:', opt);
-                });
-            }).catch(error => showToast('Error:' + error, 5000)); // Show toast for 5 seconds
-   
-}   
 
 
+function onMouseDown(e) {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = (e.clientX - rect.left) / scale;
+    mouseY = (e.clientY - rect.top) / scale;
 
-
-
-  
-
-  // loas dataset query and diagram
-  function loadDataSetQueryDiagram(datasetName)
-  {
-      // get the dataset
-      var dataset=globalDataSets[datasetName];
-      // set the query
-      window.editor.setValue(dataset.query);
-      // load the diagram
-      console.log('dataset:', dataset);
-      const div=document.getElementById('DBdiagram')
-      div.innerHTML="";
-      jsonToDom(dataset.diagram,div);
-  } 
-
-  function editTableFieldList(language)
-  {
-    const editTableFields = document.getElementById('TableEdit');
-  
-    // for each <g> object in the svgDiagram
-    var svgDiagram = document.getElementById('svgDiagram');
-    var tables=svgDiagram.querySelectorAll('g');
-    var sqlEditorTable=[];
-    // for each table
-
-    tables.forEach(table => {
-        // get the table name
-       
-        // get the table fields
-        var fields=table.querySelectorAll('rect');
-        fields.forEach(field => {
-            // cerate id for the div
-            var fieldName=field.getAttribute('data-table-field');
-            var tableName=field.getAttribute('data-table-name') ;
-            sqlEditorTable.push("PUB."+tableName+"."+fieldName);
-            var divID=tableName+"."+fieldName;
-            // check if the field is already in the editTableFields and if exists continue
-           
-            if (!editTableFields.innerHTML.includes(divID) && fieldName!==null)
-            {             
-                       
-           
-            // create the field list
-            var newColumn= document.createElement('div');
-            newColumn.setAttribute('class', 'field-item');
-            newColumn.setAttribute('data-table-name', tableName);
-            newColumn.setAttribute('data-table-field', fieldName);
-            // newColumn with field icon + field name
-            newColumn.innerHTML=`${fieldName}<br/>visible:<input type="checkbox" checked onchange="generateSQLByEditFields()"/>Alias:<input type="text" onchange="generateSQLByEditFields()" />`;
-            newColumn.id=divID;            
-            editTableFields.appendChild(newColumn);
-            
+    for (const tableName in ERDTables) {
+        const table = ERDTables[tableName];
+        if (mouseY > table.y && mouseY < table.y + 50) { // Checking header area for table dragging
+            if (mouseX > table.x && mouseX < table.x + table.width) {
+                draggingTable = tableName;
+                dragOffsetX = mouseX - table.x;
+                dragOffsetY = mouseY - table.y;
+                return;
             }
-        });
-      
-    });   
-     
-   // window.editor.options.hintOptions.tables[tableName]=sqlEditorTable;
-    // generate sql query
-    if (language=='SQL' )
-        generateSQLByEditFields();
-    if (language=='4GL')
-        generate4GLByEditFields();
-  }
-    
-
-function generate4GLByEditFields()
-{
-    const editTableFields = document.getElementById('TableEdit');
-    // get the list of div
-    var fields=editTableFields.querySelectorAll('div');
-    var sqlQuery="DEFINE VARIABLE ";
-    var sqlEditorFileds=[];
-    var sqlEditorTables=[];
-    fields.forEach(field => {
-        // get the table name
-        var tableName=field.getAttribute('data-table-name');
-        // get the field name
-        var fieldName=field.getAttribute('data-table-field');
-        // get the checkbox
-        var checkbox=field.querySelector('input[type="checkbox"]');
-        // get the alias
-        var alias=field.querySelector('input[type="text"]');
-        if (checkbox.checked)
-        {
-            if (alias.value)
-            {
-                sqlQuery+=tableName+"."+fieldName+" AS "+alias.value+", ";
-            }
-            else
-            {
-                sqlQuery+=tableName+"."+fieldName+", ";
-            }
-           
         }
-        sqlEditorFileds.push("PUB."+tableName+"."+fieldName);
-        // if the table is not in the sqlEditorTables array add it
-        if (!sqlEditorTables.includes("PUB."+tableName))
-        {
-            sqlEditorTables.push("PUB."+tableName);
+
+        const fieldIndex = getFieldIndex(mouseX, mouseY, table);
+        if (fieldIndex !== -1) {
+            draggingField = fieldIndex;
+            draggingTableName = tableName;
+            return;
         }
+    }
+}
+
+function onMouseUp(e) {
+    if (draggingField !== null) {
+        for (const tableName in ERDTables) {
+            const table = ERDTables[tableName];
+            const fieldIndex = getFieldIndex(mouseX, mouseY, table);
+            if (fieldIndex !== -1 && tableName !== draggingTableName) {
+                createZLink(draggingTableName, draggingField, tableName, fieldIndex);
+            }
+        }
+    }
+    draggingField = null;
+    draggingTableName = null;
+    draggingTable = null;
+    drawAll();
+}
+
+
+function getFieldIndex(mouseX, mouseY, table) {
+    if (mouseX > table.x && mouseX < table.x + table.width) {
+        const relativeY = mouseY - (table.y + 50); // Offset from the table header
+        if (relativeY > 0) {
+            const fieldIndex = Math.floor(relativeY / 60); // Updated to 60 from 30
+            if (fieldIndex < table.fields.length) {
+                return fieldIndex;
+            }
+        }
+    }
+    return -1;
+}
+
+
+function onMouseMove(e) {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = (e.clientX - rect.left) / scale;
+    mouseY = (e.clientY - rect.top) / scale;
+
+    if (draggingTable) {
+        const table = ERDTables[draggingTable];
+        table.x = mouseX - dragOffsetX;
+        table.y = mouseY - dragOffsetY;
+        drawAll();
+    } else if (draggingField !== null) {
+        drawAll();
+        drawDragLink();
+    }
+}
+
+function drawDragLink() {
+    if (!draggingTableName) return;
+
+    const table = ERDTables[draggingTableName];
+    const sourceX = table.x + table.width;
+    const sourceY = table.y + 50 + draggingField * 30 + 15;
+
+    ctx.beginPath();
+    ctx.moveTo(sourceX, sourceY);
+    ctx.lineTo(mouseX, mouseY);
+    ctx.strokeStyle = 'red';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+}
+
+
+
+function onRightClick(e) {
+    e.preventDefault();
+    const clickX = (e.clientX - canvas.getBoundingClientRect().left) / scale;
+    const clickY = (e.clientY - canvas.getBoundingClientRect().top) / scale;
+
+    ERDLinks = ERDLinks.filter(link => {
+        const sourceTable = ERDTables[link.sourceTableName];
+        const targetTable = ERDTables[link.targetTableName];
+
+        const sourceX = sourceTable.x + sourceTable.width;
+        const sourceY = sourceTable.y + 50 + link.sourceFieldIndex * 30 + 15;
+        const targetX = targetTable.x;
+        const targetY = targetTable.y + 50 + link.targetFieldIndex * 30 + 15;
+
+        const distToSource = Math.sqrt(Math.pow(sourceX - clickX, 2) + Math.pow(sourceY - clickY, 2));
+        const distToTarget = Math.sqrt(Math.pow(targetX - clickX, 2) + Math.pow(targetY - clickY, 2));
+
+        // Check if the click is near either endpoint of the link
+        return distToSource > 10 && distToTarget > 10;
     });
 
-    window.editor.options.hintOptions.tables=sqlEditorFileds;
-    sqlQuery=sqlQuery.substring(0,sqlQuery.length-2);   
-    sqlQuery+="\n FROM ";
-    // get the first table
-    if (sqlEditorTables.length==1)
-    {    
-        sqlQuery+=sqlEditorTables[0];
-    }
-    else
-    {
-        // check if exists the link between the tables
-        var svgDiagram = document.getElementById('svgDiagram');
-        var links=svgDiagram.querySelectorAll('polyline[id^="Link_"]');
-        if (links.length>0)
-        {
-            links.forEach(link => {
-                var sourceID=link.getAttribute('sourceID');
-                var targetID=link.getAttribute('targetID');
-                console.log('sourceID:', sourceID);
-                console.log('targetID:', targetID);
-                var source=svgDiagram.querySelector("rect[id='"+sourceID+"']");
-                var target=svgDiagram.querySelector("rect[id='"+targetID+"']");
-                var sourcteTable=source.getAttribute('data-table-name');
-                var targetTable=target.getAttribute('data-table-name');
-                var sourceField=source.getAttribute('data-table-field');
-                var targetField=target.getAttribute('data-table-field');
-                sqlQuery+=sourcteTable+" INNER JOIN "+targetTable+" ON "+sourcteTable+"."+sourceField+"="+targetTable+"."+targetField;
-            }
-            );
-        }
-    }
-}
-function generateSQLByEditFields()
-{
-    const editTableFields = document.getElementById('TableEdit');
-    // get the list of div
-    var fields=editTableFields.querySelectorAll('div');
-    var sqlQuery="SELECT ";
-    var sqlEditorFileds=[];
-    var sqlEditorTables=[];
-    fields.forEach(field => {
-        // get the table name
-        var tableName=field.getAttribute('data-table-name');
-        // get the field name
-        var fieldName=field.getAttribute('data-table-field');
-        // get the checkbox
-        var checkbox=field.querySelector('input[type="checkbox"]');
-        // get the alias
-        var alias=field.querySelector('input[type="text"]');
-        if (checkbox.checked)
-        {
-            if (alias.value)
-            {
-                sqlQuery+="PUB."+tableName+"."+fieldName+" AS "+alias.value+", ";
-            }
-            else
-            {
-                sqlQuery+="PUB."+tableName+"."+fieldName+", ";
-            }
-           
-        }
-        sqlEditorFileds.push("PUB."+tableName+"."+fieldName);
-        // if the table is not in the sqlEditorTables array add it
-        if (!sqlEditorTables.includes("PUB."+tableName))
-        {
-            sqlEditorTables.push("PUB."+tableName);
-        }
-    });
-
-    window.editor.options.hintOptions.tables=sqlEditorFileds;
-    sqlQuery=sqlQuery.substring(0,sqlQuery.length-2);   
-    sqlQuery+="\n FROM ";
-    // get the first table
-    if (sqlEditorTables.length==1)
-    {    
-        sqlQuery+=sqlEditorTables[0];
-    }
-    else
-    {
-        // check if exists the link between the tables
-        var svgDiagram = document.getElementById('svgDiagram');
-        var links=svgDiagram.querySelectorAll('polyline[id^="Link_"]');
-        if (links.length>0)
-        {
-            links.forEach(link => {
-                var sourceID=link.getAttribute('sourceID');
-                var targetID=link.getAttribute('targetID');
-                console.log('sourceID:', sourceID);
-                console.log('targetID:', targetID);
-                var source=svgDiagram.querySelector("rect[id='"+sourceID+"']");
-                var target=svgDiagram.querySelector("rect[id='"+targetID+"']");
-                var sourcteTable=source.getAttribute('data-table-name');
-                var targetTable=target.getAttribute('data-table-name');
-                var sourceField=source.getAttribute('data-table-field');
-                var targetField=target.getAttribute('data-table-field');
-                sqlQuery+="PUB."+sourcteTable+" INNER JOIN PUB."+targetTable+" ON PUB."+sourcteTable+"."+sourceField+"=PUB."+targetTable+"."+targetField;
-            });
-
-        }else
-        {
-                sqlEditorTables.forEach(table => {
-                    sqlQuery+=table+", ";
-                });
-                sqlQuery=sqlQuery.substring(0,sqlQuery.length-2);
-        }
-    }
-    window.editor.setValue(sqlQuery);
-
-
+    drawAll();
 }
 
+function onMouseLeave() {
+    draggingTable = null;
+    draggingField = null;
+    draggingTableName = null;
+   // drawAll();
+}
+
+
+// Example of adding ERDTables and ERDLinks
+/*createTableDiagram(50, 100, {
+    tableName: "users",
+    tableLabel: "Users Table",
+    databaseName: "UserDB",
+    fields: [
+        { NAME: 'userid', LABEL: 'Identifier', TYPE: 'INTEGER', fieldLabel: "User ID" },
+        { NAME: 'name', LABEL: 'Full Name', TYPE: 'VARCHAR', fieldLabel: "Username" },
+        { NAME: 'created_at', LABEL: 'Creation Date', TYPE: 'DATE', fieldLabel: "Creation Timestamp" }
+    ]
+});
+createTableDiagram(450, 100,  {
+    tableName: "orders",
+    tableLabel: "orders Table",
+    databaseName: "UserDB",
+    fields: [
+        { NAME: 'orderid', LABEL: 'Identifier', TYPE: 'INTEGER', fieldLabel: "Order ID" },
+        { NAME: 'number', LABEL: 'Full Name', TYPE: 'VARCHAR', fieldLabel: "number" },
+        { NAME: 'created_at', LABEL: 'Creation Date', TYPE: 'DATE', fieldLabel: "Creation Timestamp" }
+    ]
+});
+createZLink("users", 0, "orders", 1);
+*/

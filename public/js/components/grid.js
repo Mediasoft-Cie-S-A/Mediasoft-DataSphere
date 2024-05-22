@@ -1,14 +1,8 @@
 
 // Example usage
-var dataset = 
-     [
-        
-    ];
-
+var dataset =  [     ];
 
 var labels = [];
-
-
 
 function createElementGrid(type) {
     // Create the main div
@@ -38,10 +32,11 @@ function editElementGrid(type,element,content)
     content.appendChild(button);
     content.appendChild(createMultiSelectItem("Data", "data", "data",element.getAttribute('data'),"text",true));
     filter= createFilterBox(content);
+    element.setAttribute("filter",JSON.stringify(filter));
     content.appendChild(filter);
        // Initialize with the standard view
-       switchView(event,content,'standard');
-       regenerateFilters(content,JSON.parse(element.getAttribute("filter")));
+    switchView(event,content,'standard');
+    regenerateFilters(content,JSON.parse(element.getAttribute("filter")));
 
 }
 
@@ -50,16 +45,10 @@ function updateGridJsonData(element) {
 
  const propertiesBar = document.getElementById('propertiesBar');
  const chartID=propertiesBar.querySelector('label').textContent;
-
-
-
  console.log("currentChart:"+currentChart);
-
  console.log("propertiesBar:"+propertiesBar);
  // get value of x-axis
  var dataInput=propertiesBar.querySelector('#Data');
-
-
  var dataSelect=dataInput.querySelectorAll('div');
 
  // generate array of data
@@ -85,10 +74,20 @@ function render(dataset, labels, container,rowsPerPage=10) {
         console.error('Container not found');
         return;
     }
-    if (!dataset) {
+    console.log(dataset[0]);
+  
+    if(dataset[0]==undefined || dataset[0]==null)
+    {
         console.error('No data provided');
         return;
     }
+
+    if(dataset[0].length==0)
+    {
+        console.error('No data provided');
+        return;
+    }
+
     console.log("render");
     let currentPage = 1;
     const totalPages = Math.ceil(dataset[0].length / rowsPerPage);
@@ -171,10 +170,8 @@ function render(dataset, labels, container,rowsPerPage=10) {
         if (end > dataset[0].length) {
             end = dataset[0].length;
         }
-       // const paginatedItems = dataset.data[0].slice(start, end);
-        
-        tbody.innerHTML = '';
-        
+       // const paginatedItems = dataset.data[0].slice(start, end);        
+        tbody.innerHTML = '';        
        for(var i=start;i<end;i++)
        {
         const row = document.createElement('tr');
@@ -207,9 +204,7 @@ function getGrid(){
 
 function updateGridData(element) {
    
-    dataConfig=JSON.parse(element.getAttribute("dataConfig"));
-
-      
+    dataConfig=JSON.parse(element.getAttribute("dataConfig"));      
      var gridDatasets=[];
      var labels=[];
 

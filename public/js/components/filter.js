@@ -149,7 +149,7 @@ function allSearch(event,targetID)
             element.setAttribute("filter",JSON.stringify(jsonFilter));
             switch (element.getAttribute("tagname")) {
                 case "grid":
-                    renderGrid(element);
+                    updateGridData(element);
                     break;
                 case "BarChart":
                 case "LineChart":

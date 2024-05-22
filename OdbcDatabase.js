@@ -100,8 +100,9 @@ class OdbcDatabase {
         try {
             // Query to get list of tables in OpenEdge
             console.log("getTablesList");
-            const query = `SELECT "_File-Name" name, "_Desc" label FROM PUB."_File" WHERE "_file-Number">0 and "_file-Number"<32768 ORDER BY "_File-Name"`;
+            const query = `SELECT "_Owner"+'.'+"_File-Name" name, "_Desc" label FROM PUB."_File" WHERE "_file-Number">0 AND "_Owner" <> 'SYSPROGRESS' ORDER BY "_File-Name"`;
             const result = await this.connection.query(query);
+           // console.log(result);
             return result;
         } catch (err) {
             console.log('Error retrieving tables list:', err);
@@ -112,9 +113,11 @@ class OdbcDatabase {
     async getTableFields(tableName) {
         try {
             // Query to get fields of a table in OpenEdge
+            //split the table name in owner and table name
+            var tableParts=tableName.split(".");
             var query = `SELECT "_Field-Name" Name, "_Data-Type" 'TYPE', "_Label" LABEL, "_Mandatory" 'MANDATORY',`;
             query+=` "_Format" 'FORMAT', "_Decimals" 'DECIMAL', "_Width" 'WIDTH', "_Initial" 'DEFAULT' FROM PUB."_Field" `;
-            query+=` WHERE PUB."_Field"."_File-Recid" = (SELECT ROWID FROM PUB."_File" WHERE "_File-Name" = '${tableName}')`;
+            query+=` WHERE PUB."_Field"."_File-Recid" = (SELECT ROWID FROM PUB."_File" WHERE "_Owner" = '${tableParts[0]}' AND "_File-Name" = '${tableParts[1]}')`;
             console.log(query);
             const result = await this.connection.query(query);
             return result;
@@ -162,7 +165,7 @@ class OdbcDatabase {
                 const fieldList = fields.join(', ');
                 const offset = (page - 1) * pageSize;
                 
-                var paginatedQuery = `select  ${fieldList} FROM PUB."${tableName}"`;
+                var paginatedQuery = `select  ${fieldList} FROM "${tableName}"`;
                 if (filter && filter.length > 0) {
                     paginatedQuery+=` WHERE ${filter} `;
                 }
@@ -187,7 +190,7 @@ class OdbcDatabase {
     if (fields && fields.length > 0) {
         const fieldList = fields.join(', ');
         console.log(fieldList);
-        const query = `SELECT TOP 1 ${fieldList} FROM PUB.${tableName} `;
+        const query = `SELECT TOP 1 ${fieldList} FROM ${tableName} `;
         return this.queryData(query);
     }
     return null;
@@ -199,7 +202,7 @@ async moveToLast(tableName , fields) {
     // with DESC and then select the TOP 1 record. This assumes you have a column to order by.
     if (fields && fields.length > 0) {
         const fieldList = fields.join(', ');
-        const query = `SELECT ${fieldList} FROM PUB.${tableName} ORDER BY 1 desc `;    
+        const query = `SELECT ${fieldList} FROM ${tableName} ORDER BY 1 desc `;    
         return this.queryData(query);
     }
     return null;
@@ -210,7 +213,7 @@ async moveToNext(tableName, fields, currentRowId) {
     if (fields && fields.length > 0) {
         const fieldList = fields.join(', ');
         // Assuming 'currentRowId' is the ROWID of the current record
-        const query = `SELECT ${fieldList} FROM PUB.${tableName}  OFFSET ${currentRowId} ROWS FETCH NEXT 1 ROWS ONLY`;
+        const query = `SELECT ${fieldList} FROM ${tableName}  OFFSET ${currentRowId} ROWS FETCH NEXT 1 ROWS ONLY`;
         console.log(query);
         return this.queryData(query);
     }
@@ -224,7 +227,7 @@ async moveToPrevious(tableName, fields, currentRowId) {
     // You might need to fetch all records with ROWID less than the current one and then take the last one
     if (fields && fields.length > 0) {
         const fieldList = fields.join(', ');
-            const query = `SELECT ${fieldList} FROM PUB.${tableName} OFFSET ${currentRowId} ROWS FETCH NEXT 1 ROWS ONLY`;
+            const query = `SELECT ${fieldList} FROM ${tableName} OFFSET ${currentRowId} ROWS FETCH NEXT 1 ROWS ONLY`;
             console.log(query);
             return this.queryData(query);
         }
@@ -236,7 +239,7 @@ async getRecordByRowID(tableName, fields, rowID) {
     // Assuming 'rowID' is the ROWID of the record to move to
     if (fields && fields.length > 0) {
         const fieldList = fields.join(', ');
-        const query = `SELECT ${fieldList} FROM PUB.${tableName} WHERE ROWID = '${rowID}'`;
+        const query = `SELECT ${fieldList} FROM ${tableName} WHERE ROWID = '${rowID}'`;
         console.log(query);
         return this.queryData(query);
     }
@@ -248,7 +251,7 @@ async getRecordByRowID(tableName, fields, rowID) {
 // Move to the next record
 async getROWID(tableName, currentRowId) {
     // Assuming 'currentRowId' is the ROWID of the current record
-    const query = `SELECT ROWID FROM PUB.${tableName}  OFFSET ${currentRowId} ROWS FETCH NEXT 1 ROWS ONLY`;
+    const query = `SELECT ROWID FROM ${tableName}  OFFSET ${currentRowId} ROWS FETCH NEXT 1 ROWS ONLY`;
     console.log(query);
     return this.queryData(query);
 }
@@ -257,7 +260,7 @@ async getROWID(tableName, currentRowId) {
         try {
             
             // Construct the full SQL statement
-            const sql = `UPDATE PUB.${tableName} SET ${data.body} WHERE ROWID = '${rowID}'`;
+            const sql = `UPDATE  ${tableName} SET ${data.body} WHERE ROWID = '${rowID}'`;
     
         console.log(sql);
             // Execute the query
@@ -274,7 +277,7 @@ async getROWID(tableName, currentRowId) {
 async insertRecord(tableName, data) {
     try {
         // Construct the full SQL statement
-        const sql = `INSERT INTO PUB.${tableName} (${data.fields}) VALUES (${data.values})`;
+        const sql = `INSERT INTO ${tableName} (${data.fields}) VALUES (${data.values})`;
         console.log(sql);
         // Execute the query
         const result = await this.connection.query(sql);
@@ -292,7 +295,7 @@ async insertRecord(tableName, data) {
 async alterTable(tableName, columnName, columnType) {
     try {
         // Construct the SQL statement
-        const sql = `ALTER TABLE PUB.${tableName} ADD ${columnName} ${columnType}`;
+        const sql = `ALTER TABLE ${tableName} ADD ${columnName} ${columnType}`;
         console.log(sql);
         // Execute the query
         const result = await this.connection.query(sql);
@@ -308,7 +311,7 @@ async alterTable(tableName, columnName, columnType) {
 async alterTableColumn(tableName, columnName, newColumnName, newColumnType) {
     try {
         // Construct the SQL statement for renaming the column
-        let sql = `ALTER TABLE PUB.${tableName} RENAME COLUMN ${columnName} TO ${newColumnName}`;
+        let sql = `ALTER TABLE ${tableName} RENAME COLUMN ${columnName} TO ${newColumnName}`;
 
         // Execute the query
         let result = await this.connection.query(sql);
@@ -324,7 +327,7 @@ async alterTableColumn(tableName, columnName, newColumnName, newColumnType) {
 async createTable(tableName, columns) {
     try {
         // Construct the SQL statement
-        const sql = `CREATE TABLE PUB.${tableName} (${columns.join(', ')})`;
+        const sql = `CREATE TABLE ${tableName} (${columns.join(', ')})`;
         console.log(sql);
         // Execute the query
         const result = await this.connection.query(sql);
@@ -342,7 +345,7 @@ async selectDistinct(tableName, columnName, filter) {
         // Construct the SQL statement
         // if filter is not empty, add it to the query
 
-        var sql = `SELECT DISTINCT ${columnName} FROM PUB.${tableName} `;	
+        var sql = `SELECT DISTINCT ${columnName} FROM ${tableName} `;	
         if (filter && filter.length > 0) {
             sql+=` WHERE ${filter} `;
         }
@@ -364,7 +367,7 @@ async selectDistinct(tableName, columnName, filter) {
         try {
             // Construct the SQL statement
             const fieldList = fields.join(', ');
-            const sql = `SELECT ${fieldList} FROM PUB.${tableName}`;
+            const sql = `SELECT ${fieldList} FROM ${tableName}`;
             console.log(sql);
             // Execute the query
             const result = await this.connection.query(sql);

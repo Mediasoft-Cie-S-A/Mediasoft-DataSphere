@@ -1,0 +1,79 @@
+
+.ctab_tabs-container {
+    width: 100%;
+    height: 100%;
+    margin: 20px auto;
+}
+
+.ctab_tabs-header {
+    display: inline-block;
+    align-items: center;
+}
+
+.ctab_tab {
+    padding: 10px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    border-bottom: none;
+    background-color: #f1f1f1;
+    margin-right: 5px;
+    position: relative;
+}
+
+.ctab_tab.active {
+    background-color: #fff;
+    border-bottom: 1px solid #fff;
+}
+
+.ctab_tab input {
+    border: none;
+    background: none;
+    width: 80px;
+}
+
+.ctab_tab .ctab_close-btn {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    cursor: pointer;
+}
+
+.ctab_tab-content {
+    display: none;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-top: none;
+    background-color: #fff;
+}
+
+.ctab_ContentDiv{
+    display: none;
+    padding: 10px;
+    border: 1px dotted #ccc;  
+    background-color: #fff;
+    margin-top: 10px;
+    box-sizing: border-box !important;
+    min-height: 100px;
+}
+
+
+.ctab_HeaderButton{
+    display: inline-block;
+    padding: 10px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f1f1f1;
+    margin-right: 5px;
+    position: relative;
+    margin-top: 10px;
+    box-sizing: border-box !important;
+    box-shadow: 0 0 5px #ccc;
+}
+
+.ctab_HeaderButton.active{
+    background-color: #4d61fc;
+    border: 1px solid blue;
+    color: #fff;
+}
+/* Path: public/css/tab.css */

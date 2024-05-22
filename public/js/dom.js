@@ -123,7 +123,7 @@ function exportJson() {
         console.log(target);
         if(target === '#Dashboard') {
             getDatasets();
-            formList();
+           
         }
 
         if (target === '#renderForm') {
@@ -142,7 +142,7 @@ function exportJson() {
         if (target === '#DatabaseForm') {
             console.log('DatabaseForm');
             createTableListDb();
-            
+            getDatasets();
         }
     }
 

@@ -88,6 +88,8 @@ function createInputDiv(id, labelText, onChangeFunction,text) {
 function editElement(element) {
     // Get the type of the element
      // if type is null get the element type
+     console.log("element:"+element);
+     console.log("element.tagName:"+element.tagName);
     var type = element.getAttribute('tagName');
         currentElement=element
         var dialog= document.getElementById("propertiesBar");
@@ -116,7 +118,8 @@ function editElement(element) {
         content.appendChild(label);
         content.appendChild(document.createElement('hr'));
         // Execute the function editor delcared in the components js if exists type   
-      //  console.log("type:"+elementsData[type]);
+        console.log("type:"+elementsData[type]);
+
         if (elementsData[type]){
             if (elementsData[type].editFunction) {
                 var functionName = elementsData[type].editFunction;

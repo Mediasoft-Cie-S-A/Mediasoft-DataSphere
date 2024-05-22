@@ -178,7 +178,16 @@ function createFilterBox(main) {
     lbl.setAttribute("for", div.id);
     lbl.textContent = "Filter:";
     div.appendChild(lbl);
+    // add add button for the filter
+    var addButton = document.createElement("button");
+    addButton.innerHTML = '<i class="fa fa-plus"></i>';
+    addButton.onclick = function() {
+        // create the filter box
+        const filterBox = main.querySelector('#filterBoxContainer');
+    };
+    
     // clear button for the filter with icon 
+    
     var clearButton = document.createElement("button");
     clearButton.innerHTML = '<i class="fa fa-trash"></i>';
     clearButton.onclick = function() {
@@ -701,7 +710,6 @@ function getFilterUrl(element)
     {
         var filter=JSON.parse(element.getAttribute("filter"));
         // if filter is not empty
-
         console.log("filter:"+filter);
         // get the filter view
         var view=filter.view;

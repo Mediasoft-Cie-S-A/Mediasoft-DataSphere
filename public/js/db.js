@@ -29,13 +29,13 @@ function fetchTablesList(list) {
     fetch('/tables-list')
         .then(response => response.json())
         .then(dbs => {
-            console.log('dbs:', dbs);
+        //    console.log('dbs:', dbs);
             list.innerHTML = '';
              // add new table button
              tableList=[];
              for (const [key, value] of Object.entries(dbs)) {
-                    console.log('key:', key);
-                    console.log('dbs[key]:', dbs[key]);
+                //    console.log('key:', key);
+               //     console.log('dbs[key]:', dbs[key]);
                     const dbdiv = document.createElement('div');
                     dbdiv.classList.add('db-item');
                     dbdiv.innerHTML = '<i class="fas fa-database">'+key+'</i>';
@@ -50,7 +50,7 @@ function fetchTablesList(list) {
                         listItem.setAttribute('data-table-name', table.NAME);
                         listItem.setAttribute('data-table-label', table.LABEL);
                         listItem.setAttribute("draggable","true");
-                        listItem.setAttribute("ondragstart","drag(event)");
+                        listItem.setAttribute("ondragstart","dragTable(event)");
                         listItem.classList.add('draggable');
                         listItem.id=table.NAME;
                         // show hint on hover
@@ -63,7 +63,12 @@ function fetchTablesList(list) {
         .catch(error => console.error('Error:', error));
 }
 
-
+function dragTable(ev) {
+    
+    const database = ev.target.getAttribute('data-db-name');
+    const table = ev.target.getAttribute('data-table-name');
+    ev.dataTransfer.setData("text/plain", JSON.stringify({ database, table }));
+}
 
 function searchTable(event,value) {
     event.preventDefault();
