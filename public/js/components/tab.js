@@ -38,7 +38,7 @@ function createElementTab(type) {
 
 function editElementTab(type,element,content)
 {
-    console.log('editElementTab');
+    addLog('editElementTab');
   
     //get all the tabs
     const tabsHeader= element.querySelectorAll('.ctab_HeaderButton');

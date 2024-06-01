@@ -143,8 +143,8 @@
                             <!-- Sidebar -->
                               <table class="table table-striped table-bordered table-hover table-condensed">
                                 <tr>
-                                <td style="width: 400px;">
-                                <div id="componentsSidebar" >
+                                <td >
+                                <div id="componentsSidebar"  style="width: 170px;">
                                 
                                 </div>
                             </td>
@@ -218,8 +218,8 @@
                                                         onchange="loadDataSetQueryDiagram(this.value)"  >
                                                         <datalist id="DataSetList" style="width: 400px;"></datalist>
                                                     </div>
-                                                    <div> <button onclick="executeQuery()" style="display: inline-block" >></button></div>
-                                                     <div> <button onclick="saveQuery()" style="display: inline-block">Save</button></div>
+                                                    <div> <button onclick="executeQuery(event)" style="display: inline-block" >Run</button></div>
+                                                     <div> <button onclick="saveQuery(event)" style="display: inline-block">Save</button></div>
                                                       
                                            
                                                </div>
@@ -288,6 +288,7 @@
 
     <div id="toast-container"></div>
     <div id="hint-container"></div>
+    <div id="log-container"></div>
     <dialog id="jsCodeDialog" >
         <div>JSCODE Editor</div>   
         <div style="border: 1px solid black;">

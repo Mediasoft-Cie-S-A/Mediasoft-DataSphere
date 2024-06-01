@@ -29,13 +29,13 @@ function fetchTablesList(list) {
     fetch('/tables-list')
         .then(response => response.json())
         .then(dbs => {
-        //    console.log('dbs:', dbs);
+        //    addLog('dbs:', dbs);
             list.innerHTML = '';
              // add new table button
              tableList=[];
              for (const [key, value] of Object.entries(dbs)) {
-                //    console.log('key:', key);
-               //     console.log('dbs[key]:', dbs[key]);
+                //    addLog('key:', key);
+               //     addLog('dbs[key]:', dbs[key]);
                     const dbdiv = document.createElement('div');
                     dbdiv.classList.add('db-item');
                     dbdiv.innerHTML = '<i class="fas fa-database">'+key+'</i>';
@@ -145,7 +145,7 @@ function loadFieldsList(fieldName)
 {
    var table= document.getElementById('TableFieldsList');
    var tableNameSelect= document.querySelector('tr[data-field-name="'+fieldName+'"] select[name="tableName"]');
-   console.log('tableNameSelect:', tableNameSelect);
+   addLog('tableNameSelect:', tableNameSelect);
    var tableName=tableNameSelect.options[tableNameSelect.selectedIndex].value;
     var select = document.querySelector('tr[data-field-name="'+fieldName+'"] select[name="fieldName"]');
     select.innerHTML = '';

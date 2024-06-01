@@ -116,11 +116,11 @@ function exportJson() {
     // Function to handle tab switch
     function onTabSwitch(event) {
         event.preventDefault();
-        console.log("onTabSwitch");
+        addLog("onTabSwitch");
         var target = event.target.getAttribute("href");
         removeSelection();
         hideEditMenu();
-        console.log(target);
+        addLog(target);
         if(target === '#Dashboard') {
             getDatasets();
            
@@ -129,7 +129,7 @@ function exportJson() {
         if (target === '#renderForm') {
             var formContainer = document.getElementById('formContainer');
             var jsonData = domToJson(formContainer);
-            console.log(jsonData);
+            addLog(jsonData);
             var renderContainer = document.getElementById('renderForm');
 
             // Clear previous content
@@ -140,7 +140,7 @@ function exportJson() {
             
         }
         if (target === '#DatabaseForm') {
-            console.log('DatabaseForm');
+            addLog('DatabaseForm');
             createTableListDb();
             getDatasets();
         }

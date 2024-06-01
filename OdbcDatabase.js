@@ -28,12 +28,18 @@ class OdbcDatabase {
         try {
             const connectionConfig = {
                 connectionString: this.connectionString,
-                connectionTimeout: 100,
-                loginTimeout: 100,
+                connectionTimeout: 1000,
+                loginTimeout: 1000,
+                
+                
             }
+
             this.connection = await this.odbc.connect(connectionConfig);
-    
+            // Set the isolation level to read uncommitted
             this.connection.setIsolationLevel(this.odbc.SQL_TXN_READ_UNCOMMITTED);
+            // set the fetch rows to 1000
+        
+
         } catch (err) {
             console.log('Error connecting to the database:', err);
           //  throw err;
@@ -59,7 +65,9 @@ class OdbcDatabase {
 
     async queryData(queryString) {
         try {
+            console.log(queryString);
             const result = await this.connection.query(queryString);
+            console.log(result);
             return result;
         } catch (err) {
             console.log('Error querying data:', err);

@@ -23,7 +23,7 @@ function removeAllChildNodes(parent) {
 
 
 function onchangeInput(event,styleProperty,attribute) {
-    console.log("onchange:"+this.value);    
+    addLog("onchange:"+this.value);    
              if (attribute===true)
              {   
                   updateAttribute(styleProperty, this.value);
@@ -88,8 +88,8 @@ function createInputDiv(id, labelText, onChangeFunction,text) {
 function editElement(element) {
     // Get the type of the element
      // if type is null get the element type
-     console.log("element:"+element);
-     console.log("element.tagName:"+element.tagName);
+     addLog("element:"+element);
+     addLog("element.tagName:"+element.tagName);
     var type = element.getAttribute('tagName');
         currentElement=element
         var dialog= document.getElementById("propertiesBar");
@@ -118,12 +118,12 @@ function editElement(element) {
         content.appendChild(label);
         content.appendChild(document.createElement('hr'));
         // Execute the function editor delcared in the components js if exists type   
-        console.log("type:"+elementsData[type]);
+        addLog("type:"+elementsData[type]);
 
         if (elementsData[type]){
             if (elementsData[type].editFunction) {
                 var functionName = elementsData[type].editFunction;
-               console.log("functionName:"+functionName);
+               addLog("functionName:"+functionName);
                 window[functionName](type,element,content);
             
             }
@@ -181,14 +181,14 @@ function updateElementTxtC(t)
 
 function updateElementStyle(type,t)
 {
-   console.log("updateElementStyle:"+type+" "+t);
+   addLog("updateElementStyle:"+type+" "+t);
     currentElement.style.setProperty(type,t);     
     
 }
 
 function updateAttribute(type,t)
 {
-   console.log("updateElementAttribute:"+type+" "+t);
+   addLog("updateElementAttribute:"+type+" "+t);
     currentElement.setAttribute(type,t);     
     
 }
@@ -215,7 +215,7 @@ function deleteSelectedElement() {
 // Event listener for keypress on the window
 window.addEventListener('keyup', function(event) {
     // Check if the pressed key is the one you want, e.g., the Delete key
-   // console.log(event.key);
+   // addLog(event.key);
     if (event.key === 'Delete') {
      
         deleteSelectedElement();
@@ -233,7 +233,7 @@ formContainer.addEventListener('click', function(event) {
     event.preventDefault();
     // remove gjs-selection class from all elements
     removeSelection();
-    console.log("event.target.id:"+event.target.id);    
+    addLog("event.target.id:"+event.target.id);    
     if (event.target.id === 'formContainer') {       
         
         hideEditMenu();
@@ -247,7 +247,7 @@ formContainer.addEventListener('click', function(event) {
     var editorFloatMenu = document.getElementById('editorFloatMenu');
     editorFloatMenu.style.display = 'block';
     // Get the total offset by combining formContainer's and element's offset
-   // console.log("formContainer.offsetTop:"+formContainer.offsetTop);
+   // addLog("formContainer.offsetTop:"+formContainer.offsetTop);
     var totalOffsetTop = top + editorElementSelected.offsetTop -25;
     var totalOffsetLeft = left+ editorElementSelected.offsetLeft + editorElementSelected.offsetWidth;
 
@@ -271,7 +271,7 @@ function getAbsoluteOffset(element) {
 function showProperties()
 {
     const inputElementSelected=document.getElementById("editorElementSelected");
-  //  console.log("inputElementSelected.value:"+inputElementSelected.value);
+  //  addLog("inputElementSelected.value:"+inputElementSelected.value);
     var editorElementSelected=document.getElementById(inputElementSelected.value);
 
     editElement(editorElementSelected);
@@ -305,18 +305,18 @@ function dropInput(event) {
     
     event.preventDefault();
 
-    console.log("dropInput");
-    //  console.log( event.dataTransfer);
+    addLog("dropInput");
+    //  addLog( event.dataTransfer);
     var elementId = event.dataTransfer.getData("text");
-    //console.log("elementId:"+elementId);
+    //addLog("elementId:"+elementId);
   
     // get the element source 
     var element = document.getElementById(elementId);
     var type=element.getAttribute("dataType");
   //  var query=element.getAttribute("query");
     var dataset=element.getAttribute("data-table-name");
-   // console.log("type:"+type);
-   // console.log("query:"+query);
+   // addLog("type:"+type);
+   // addLog("query:"+query);
     // set the type and query in the destination element
     event.target.setAttribute("dataType",type);
   //  event.target.setAttribute("query",query);
@@ -324,7 +324,7 @@ function dropInput(event) {
     // split the elementId to get the table name and field name
     
     const elements=elementId.split(".");
-    console.log(elements);
+    addLog(elements);
     if (elements.length>1)
     {
         // get ObjectType

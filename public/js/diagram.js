@@ -70,7 +70,7 @@ canvas.addEventListener('dragover', function(ev) {
 
 canvas.addEventListener('drop', function(ev) {
     ev.preventDefault();
-    console.log('Dropped:', ev.dataTransfer.getData("text/plain"));
+    addLog('Dropped:', ev.dataTransfer.getData("text/plain"));
     const data = JSON.parse(ev.dataTransfer.getData("text/plain"));
     fetchTableStructure(data.database, data.table, ev.clientX, ev.clientY);
 });
@@ -98,7 +98,7 @@ function drawTableAtPosition(database,table,tableData, x, y) {
             TYPE: field.TYPE  // Adjust according to actual data structure
         }))
     };
-    console.log('Fetched table data:', inputTableData);
+    addLog('Fetched table data:', inputTableData);
     createTableDiagram(x - 100, y - 50, inputTableData);  // Adjust x, y to center the table
 }
 
@@ -119,18 +119,18 @@ function findLinkAtPosition(x, y) {
 }
 
 function addRelation(table) {
-    console.log('Adding relation to:', table.tableName);
+    addLog('Adding relation to:', table.tableName);
     // Implement relation adding logic
 }
 
 function deleteTable(table) {
-    console.log('Deleting table:', table.tableName);
+    addLog('Deleting table:', table.tableName);
     delete ERDTable[table.tableName];
     drawAll();  // Redraw canvas after deletion
 }
 
 function deleteLink(link) {
-    console.log('Deleting link:', link);
+    addLog('Deleting link:', link);
     const index = ERDLinks.indexOf(link);
     if (index > -1) {
         ERDLinks.splice(index, 1);

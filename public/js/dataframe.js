@@ -39,7 +39,7 @@ class DataFrame {
     }
     // get dataframe headers
     headers() {
-      //  console.log(this.data[0]);
+      //  addLog(this.data[0]);
       // check if data is empty
         if(this.data.length === 0)
         {
@@ -74,7 +74,7 @@ class DataFrame {
         }
         for (var i = 0; i < this.data.length; i++) {
            
-            console.log(this.data[i][column]);
+            addLog(this.data[i][column]);
             sum += this.data[i][column];
         }
         return sum ;
@@ -255,7 +255,7 @@ class DataFrame {
         for (var i = 0; i < this.data.length; i++) {
             // create aggregate key            
             var row = this.data[i][column] ;
-         //  console.log(this.data[i]);
+         //  addLog(this.data[i]);
             // if row is not in index then add it and adding the data row
               if(index[row] === undefined)
               {
@@ -289,7 +289,7 @@ class DataFrame {
          // eval() function evaluates JavaScript code represented as a string.
             if (eval(condition)) {
                 filteredData.push(row);
-           //     console.log(row);
+           //     addLog(row);
             }
         });
         return filteredData;
@@ -309,7 +309,7 @@ class DataFrame {
                 aggregateColumns.push(headers[i]);
             }
         }
-      //  console.log(aggregateColumns);
+      //  addLog(aggregateColumns);
 
         var index = this.createAggregateIndex(aggregateColumns);       
         // local hash table
@@ -317,9 +317,9 @@ class DataFrame {
         // get sum of columns
         for (key in index) {
             // get the rows of the key
-            //console.log(key);
+            //addLog(key);
             var rows = index[key];
-           // console.log(rows);
+           // addLog(rows);
             for(var i=0; i<rows.length; i++)
             {
                 var row = rows[i];
@@ -354,7 +354,7 @@ class DataFrame {
                     if(Array.isArray(row[columns[j]]))
                     {
                         // sum the array
-                       // console.log(row[columns[j]]);
+                       // addLog(row[columns[j]]);
                        for(var k=0; k<row[columns[j]].length; k++)
                        {
                         sumColumns[key][columns[j]][k] += row[columns[j]][k];
@@ -387,7 +387,7 @@ class DataFrame {
             for (var i = 0; i < columns.length; i++) {
                 row[columns[i]] = sumColumns[key][columns[i]];
             }
-          //  console.log(row);
+          //  addLog(row);
             sumColumnsDf.push(row);
         }
         return sumColumnsDf;
@@ -456,7 +456,7 @@ class DataFrame {
                 {
                     row[columns[i]+'_2'] = row2[columns[i]];
                 }
-               // console.log(row);
+               // addLog(row);
                 mergedData.push(row);
             }
         }

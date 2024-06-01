@@ -74,7 +74,7 @@ function createElementChart(type) {
 
 function editElementChart(type,element,content)
 {
-    console.log("editElementChart");
+    addLog("editElementChart");
     const button = document.createElement('button');
     button.textContent = 'update';
     button.onclick = function() {
@@ -94,7 +94,7 @@ function editElementChart(type,element,content)
     const dataConfig=JSON.parse(element.getAttribute("dataConfig"));
     
     dataConfig.forEach(config => {
-      console.log(config.fieldName + ' ' + config.dataType + ' ' + config.functionName);
+      addLog(config.fieldName + ' ' + config.dataType + ' ' + config.functionName);
       addFieldToPropertiesBar(data,config);
     });
     // get lendend input
@@ -174,271 +174,264 @@ function getChart(){
 function createFilterBox(main) {
     var div = document.createElement("div");
     div.id = 'filterBox';
+    
     var lbl = document.createElement("label");
     lbl.setAttribute("for", div.id);
     lbl.textContent = "Filter:";
     div.appendChild(lbl);
-    // add add button for the filter
+
+    // Add button to add a new filter
     var addButton = document.createElement("button");
     addButton.innerHTML = '<i class="fa fa-plus"></i>';
     addButton.onclick = function() {
-        // create the filter box
-        const filterBox = main.querySelector('#filterBoxContainer');
+        const filterBoxContainer = main.querySelector('#filterBoxContainer');
+        filterBoxContainer.appendChild(createFilterField(main));
     };
-    
-    // clear button for the filter with icon 
-    
+    div.appendChild(addButton);
+
+    // Clear button for the filter with icon
     var clearButton = document.createElement("button");
     clearButton.innerHTML = '<i class="fa fa-trash"></i>';
     clearButton.onclick = function() {
-        // delete attribute filter of the element
         const chart = document.getElementById(main.getAttribute("elementId"));
         chart.removeAttribute("filter");
-        // clear the filter box
-        const filterBox = main.querySelector('#filterBoxContainer');
-        filterBox.innerHTML = '';
-        // apply switchview with current value of select
+        const filterBoxContainer = main.querySelector('#filterBoxContainer');
+        filterBoxContainer.innerHTML = '';
         const viewSelect = main.querySelector('#viewSelect');
         switchView(event, main, viewSelect.value);
     };
     div.appendChild(clearButton);
+
     // Create container for the filter box
     const filterBoxContainer = document.createElement('div');
     filterBoxContainer.id = 'filterBoxContainer';
-  
+
     // Create the view select dropdown
     const viewSelect = document.createElement('select');
     viewSelect.id = 'viewSelect';
-    // Add options
     ['standard', 'advanced'].forEach(view => {
         const option = new Option(view, view);
-        console.log(option);
         viewSelect.options.add(option);
     });
-  
+
     // Append the view select to the container
     div.appendChild(viewSelect);
-  
+
     // Event listener for changing views
-    viewSelect.addEventListener('change', function() {
-      switchView(event, main,this.value);
+    viewSelect.addEventListener('change', function(event) {
+        switchView(event, main, this.value);
     });
     div.appendChild(filterBoxContainer);
-     // create button apply filter
-     // Create a button for generating JSON
+
+    // Create button to apply filter
     const generateJsonBtn = document.createElement('button');
     generateJsonBtn.textContent = 'Apply';
-    generateJsonBtn.setAttribute("onclick","generateJson(event,'"+ main.id +"')");
-    filterBoxContainer.appendChild(generateJsonBtn);
-   
+    generateJsonBtn.setAttribute("onclick", "generateJson(event,'" + main.id + "')");
     div.appendChild(generateJsonBtn);
+
     return div;
-  }
-  
-  // Function to switch views
-  function switchView(event,main,view) {
-    event.preventDefault();
-    const container = main.querySelector('#filterBoxContainer');
-  
-    // Clear previous content except the view select
-    container.querySelectorAll(':not(#viewSelect)').forEach(el => el.remove());
+}
+
+// Function to create individual filter fields
+function createFilterField(main) {
+    const container = document.createElement('div');
+    container.className = 'filterField';
+
     const textField = document.createElement('input');
     textField.placeholder = 'Field';
     textField.name = 'field';
-    textField.setAttribute('ObjectType','filters');
+    textField.setAttribute('ObjectType', 'filters');
     textField.setAttribute('ondragover', 'allowDrop(event)');
     textField.setAttribute('ondrop', 'dropInput(event)');
-    if (view === 'standard') {
-      // Standard view elements
-     
-      textField.addEventListener('input', function(event) {
-        // get query attribute
-        const dataset= this.getAttribute('dataSet');
-        // create the url for /getDatasetDataDistinct/:datasetName/:field
-        const url = '/getDatasetDataDistinct/'+dataset+'/'+this.value;
-    
-        console.log('url:', url);
-        fetch(url)
-        .then(response => response.json())
-        .then(data => {
-            console.log(data);
-            const multiSelect = document.querySelector('#filterBoxContainer select:not(#viewSelect)');
-            // empty the select
-            multiSelect.innerHTML = '';
-            // create the options
-            data.forEach(value => {
-                var opt = document.createElement('option');
-                opt.value = value;
-                opt.innerHTML = value;
-                multiSelect.appendChild(opt);
-            });
 
-            // check if json filter exists
-            const chart = document.getElementById(main.getAttribute("elementId"));
-            if (chart.getAttribute("filter"))
-            {
-                // get the json
-                var filterConfig=JSON.parse(chart.getAttribute("filter"));
-                // get the filter
-                var filter=filterConfig.filters[0];
-                filter.values.forEach(val => {
-                    for (let option of multiSelect.options) {
-                    if (option.value === val) option.selected = true;
+    container.appendChild(textField);
+
+    // Create and append input fields based on view
+    const viewSelect = main.querySelector('#viewSelect').value;
+    if (viewSelect === 'standard') {
+        const multiSelect = document.createElement('select');
+        multiSelect.multiple = true;
+
+        textField.addEventListener('input', function(event) {
+            const dataset = this.getAttribute('dataSet');
+            const url = '/getDatasetDataDistinct/' + dataset + '/' + this.value;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    multiSelect.innerHTML = '';
+                    data.forEach(value => {
+                        var opt = document.createElement('option');
+                        opt.value = value;
+                        opt.innerHTML = value;
+                        multiSelect.appendChild(opt);
+                    });
+
+                    const chart = document.getElementById(main.getAttribute("elementId"));
+                    if (chart.getAttribute("filter")) {
+                        var filterConfig = JSON.parse(chart.getAttribute("filter"));
+                        var filter = filterConfig.filters[0];
+                        filter.values.forEach(val => {
+                            for (let option of multiSelect.options) {
+                                if (option.value === val) option.selected = true;
+                            }
+                        });
                     }
                 });
-            }
         });
-    // get the object by id      
-      });
-      const multiSelect = document.createElement('select');
-      multiSelect.multiple = true;
-      // Example options - replace with your actual options  
-   
-  
-      // Append standard view elements
-      container.appendChild(textField);
-      container.appendChild(multiSelect);
-    } else if (view === 'advanced') {
-      // Advanced view elements
-    
-      const operatorSelect = document.createElement('select');
-      // Example operators - replace with your actual options
-      ['=', '!=', '<', '>', '>=', '<='].forEach(op => {
-        const option = new Option(op, op);
-        operatorSelect.options.add(option);
-      });
-  
-      const valueInput = document.createElement('input');
-      valueInput.placeholder = 'Value';
-  
-      // Append advanced view elements
-      container.appendChild(textField);
-      container.appendChild(operatorSelect);
-      container.appendChild(valueInput);
+
+        container.appendChild(multiSelect);
+    } else if (viewSelect === 'advanced') {
+        const operatorSelect = document.createElement('select');
+        ['=', '!=', '<', '>', '>=', '<='].forEach(op => {
+            const option = new Option(op, op);
+            operatorSelect.options.add(option);
+        });
+
+        const valueInput = document.createElement('input');
+        valueInput.placeholder = 'Value';
+
+        container.appendChild(operatorSelect);
+        container.appendChild(valueInput);
     }
-  }
+
+    return container;
+}
+
+// Function to switch views
+function switchView(event, main, view) {
+    event.preventDefault();
+    const container = main.querySelector('#filterBoxContainer');
+    container.innerHTML = '';
+
+    const addFilterField = createFilterField(main);
+    container.appendChild(addFilterField);
+}
   
-  // Function to collect data and generate JSON
+ // Function to collect data and generate JSON
 function generateJson(event, mainId) {
     event.preventDefault();
-    console.log("generateJson");
-    console.log(mainId);
-    const main =document.getElementById(mainId);
+    addLog("generateJson");
+    addLog(mainId);
+    
+    const main = document.getElementById(mainId);
     const viewSelect = main.querySelector('#viewSelect');
     if (!viewSelect) return;
+    
     const view = viewSelect.options[viewSelect.selectedIndex].value;
     let filterInfo = { view: view, filters: [] };
-    const fieldInput = document.querySelector('#filterBoxContainer input[name="field"]');
-    const dataType=fieldInput.getAttribute('dataType');
+    
+    const filterFields = main.querySelectorAll('#filterBoxContainer .filterField');
 
+    filterFields.forEach(filterField => {
+        const fieldInput = filterField.querySelector('input[name="field"]');
+        const dataType = fieldInput.getAttribute('dataType');
+        
+        if (view === 'standard') {
+            const multiSelect = filterField.querySelector('select');
+            const selectedOptions = Array.from(multiSelect.selectedOptions).map(option => option.value);
+            let filterValues = [];
 
-    if (view === 'standard') {
-      
-      const multiSelect = document.querySelector('#filterBoxContainer select:not(#viewSelect)');
-      const selectedOptions = Array.from(multiSelect.selectedOptions).map(option => option.value);
-      var filterValues=[];
-      switch (dataType) {
-        case 'string':
-            selectedOptions.forEach(option => {
-                filterValues.push(option);
+            switch (dataType) {
+                case 'string':
+                    filterValues = selectedOptions;
+                    break;
+                case 'number':
+                    filterValues = selectedOptions.map(option => parseFloat(option));
+                    break;
+                case 'date':
+                    filterValues = selectedOptions.map(option => new Date(option));
+                    break;
+            }
+
+            filterInfo.filters.push({
+                field: fieldInput.value,
+                dataset: fieldInput.getAttribute('dataSet'),
+                type: dataType,
+                operator: '',
+                value: '',
+                values: filterValues
             });
-            break;
-        case 'number':
-            selectedOptions.forEach(option => {
-                filterValues.push(parseFloat(option));
-            });
-            break;
-        case 'date':
-            selectedOptions.forEach(option => {
-                filterValues.push(new Date(option));
-            });
-            break;
-    }
 
+        } else if (view === 'advanced') {
+            const operatorSelect = filterField.querySelector('select');
+            const valueInput = filterField.querySelector('input[placeholder="Value"]');
+            let value = null;
 
-      filterInfo.filters.push({
-        field: fieldInput.value,
-        dataset: fieldInput.getAttribute('dataSet'),
-        type: fieldInput.getAttribute('dataType'),
-        operator: '',
-        value: '',
-        values: filterValues
-      });
-    } else if (view === 'advanced') {
-      
-      const operatorSelect = document.querySelector('#filterBoxContainer select:not(#viewSelect)');
-      const valueInput = document.querySelector('#filterBoxContainer input[placeholder="Value"]');
-      var value = null;
-      switch(dataType)
-        {
-            case 'string':
-                value=valueInput.value;
-                break;
-            case 'number':
-                value=parseFloat(valueInput.value);
-                break;
-            case 'date':
-                value=new Date(valueInput.value);
-                break;
+            switch (dataType) {
+                case 'string':
+                    value = valueInput.value;
+                    break;
+                case 'number':
+                    value = parseFloat(valueInput.value);
+                    break;
+                case 'date':
+                    value = new Date(valueInput.value);
+                    break;
+            }
+
+            filterInfo.filters.push({
+                field: fieldInput.value,
+                dataset: fieldInput.getAttribute('dataSet'),
+                type: dataType,
+                operator: operatorSelect.value,
+                value: value,
+                values: []
+            });
         }
-      filterInfo.filters.push({
-        field: fieldInput.value,
-        dataset: fieldInput.getAttribute('dataSet'),
-        type: fieldInput.getAttribute('dataType'),
-        operator: operatorSelect.value,
-        value: value,
-        values: []
-      });
-    }
-    const chart = document.getElementById(main.getAttribute("elementId"));
-        // Display the JSON for demonstration purposes
-        console.log(JSON.stringify(filterInfo));
+    });
 
-    chart.setAttribute("filter",JSON.stringify(filterInfo));
-  
+    const chart = document.getElementById(main.getAttribute("elementId"));
+    chart.setAttribute("filter", JSON.stringify(filterInfo));
+
+    // Display the JSON for demonstration purposes
+    addLog(JSON.stringify(filterInfo));
+
     // Here you could also send the JSON to a server, save it, or use it in some other way
     // For example:
     // fetch('/api/filters', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(filterInfo) });
-  }
+}
 
-  // Function to regenerate filters from JSON
-function regenerateFilters(content,filterConfig) {
-    
+ // Function to regenerate filters from JSON
+function regenerateFilters(content, filterConfig) {
     switchView(event, content, filterConfig.view); // Ensure the correct view is set
-    if ( filterConfig.filters.length > 0)
-    {
-       // console.log(filterConfig);
-        const filter = filterConfig.filters[0]; // Assuming single filter for simplicity
-
-        const textField = content.querySelector('#filterBoxContainer input[name="field"]');
-        textField.value = filter.field;
-  
-        textField.setAttribute('dataType', filter.type);
-        textField.setAttribute('dataSet', filter.dataset);
-        if (filterConfig.view === 'standard' ) {
-        const filter = filterConfig.filters[0]; // Assuming single filter for simplicity      
-        
-        const multiSelect = content.querySelector('#filterBoxContainer select:not(#viewSelect)');
-        textField.dispatchEvent(new Event('input'));
-
-      
-        } else if (view === 'advanced' ) {
-            content.querySelector('#filterBoxContainer select:not(#viewSelect)').value = filter.operator;
-            content.querySelector('#filterBoxContainer input[placeholder="Value"]').value = filter.value;
-            textField.dispatchEvent(new Event('input'));
-
-        }
-
     
-        }
-  }
+    if (filterConfig.filters.length > 0) {
+        filterConfig.filters.forEach(filter => {
+            const filterBoxContainer = content.querySelector('#filterBoxContainer');
+            const filterField = createFilterField(content);
+            filterBoxContainer.appendChild(filterField);
+            
+            const textField = filterField.querySelector('input[name="field"]');
+            textField.value = filter.field;
+            textField.setAttribute('dataType', filter.type);
+            textField.setAttribute('dataSet', filter.dataset);
+
+            if (filterConfig.view === 'standard') {
+                const multiSelect = filterField.querySelector('select');
+                textField.dispatchEvent(new Event('input')); // Trigger input event to populate options
+                setTimeout(() => {
+                    filter.values.forEach(val => {
+                        for (let option of multiSelect.options) {
+                            if (option.value === val) option.selected = true;
+                        }
+                    });
+                }, 1000); // Adjust timeout as needed to ensure options are populated
+            } else if (filterConfig.view === 'advanced') {
+                filterField.querySelector('select').value = filter.operator;
+                filterField.querySelector('input[placeholder="Value"]').value = filter.value;
+            }
+        });
+    }
+}
+
   
 
   
 
 function createSelectItem(id, label, styleProperty,text,type,attribute)
  {
-    console.log(text);
+    addLog(text);
    
     var div = document.createElement("div");
     div.id = id;
@@ -463,8 +456,8 @@ function createSelectItem(id, label, styleProperty,text,type,attribute)
         // get type of the field
         var dataType = this.getAttribute('dataType');
         // empty the select
-        console.log("dataType:"+dataType);
-        console.log("select:"+select);
+        addLog("dataType:"+dataType);
+        addLog("select:"+select);
         setOptionsByType(select,dataType);
    
     // get the object by id
@@ -508,7 +501,7 @@ function setOptionsByType(select,type)
 
 function createMultiSelectItem(id, label, styleProperty,text,type,attribute)
  {
-    console.log(text);
+    addLog(text);
     var div = document.createElement("div");
     div.style.display = 'flex';
     div.style.flexDirection = 'column';
@@ -555,9 +548,9 @@ function updateJsonData() {
    
     const currentChart = document.getElementById(chartID);
 
-    console.log("currentChart:"+currentChart);
+    addLog("currentChart:"+currentChart);
 
-    console.log("propertiesBar:"+propertiesBar);
+    addLog("propertiesBar:"+propertiesBar);
     // get value of x-axis
     var dataInput=propertiesBar.querySelector('#Data');
  
@@ -598,9 +591,9 @@ function renderData(element) {
     var chartBorderColors = [ 'rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)',   'rgba(255, 206, 86, 1)', 'rgba(75, 192, 192, 1)',   'rgba(153, 102, 255, 1)', 'rgba(255, 159, 64, 1)' ];
 
     var chart=chartList[parseInt(element.getAttribute("chartNumber"))];
-    console.log("chart:"+chart);
-    console.log("element:"+element);
-    console.log(parseInt(element.getAttribute("chartNumber")));
+    addLog("chart:"+chart);
+    addLog("element:"+element);
+    addLog(parseInt(element.getAttribute("chartNumber")));
     // get legend field name for the group by
     labelName=element.getAttribute("labels-data-field");
     // staring from legend
@@ -620,14 +613,14 @@ function renderData(element) {
                
                 for (index=0;index<dataConfig.length;index++)
                 {
-                   console.log(index);
+                   addLog(index);
                     var config=dataConfig[index];
-                    console.log(config);
+                    addLog(config);
                     var functionName=config.functionName;
-                    console.log("functionName:"+functionName);
+                    addLog("functionName:"+functionName);
 
                     var fieldName=config.fieldName;
-                    console.log("fieldName:"+fieldName);
+                    addLog("fieldName:"+fieldName);
                     // prepare the dataset
                     
                     
@@ -690,8 +683,8 @@ function renderData(element) {
                         
                         chart.data.datasets[index].data=columnData;                       
                         chart.data.labels=columnLabels;
-                        console.log("columnData:"+chart.data.datasets[index].data   );           
-                        console.log("columnLabels:"+chart.data.labels);
+                        addLog("columnData:"+chart.data.datasets[index].data   );           
+                        addLog("columnLabels:"+chart.data.labels);
                        
               
             }// for(index=0;index<dataConfig.length;index++)
@@ -700,56 +693,36 @@ function renderData(element) {
 }
 
 // get the filter url   
-function getFilterUrl(element)
-{
-    var url = '/getDatasetDataByFilter?datasetName='+element.getAttribute("dataSet");
-                        
-    var field="";
-    var values="";
-    if (element.getAttribute("filter"))
-    {
-        var filter=JSON.parse(element.getAttribute("filter"));
-        // if filter is not empty
-        console.log("filter:"+filter);
-        // get the filter view
-        var view=filter.view;
-        // if the filter is standard get the filter values
-        if (view==='standard')
-        {
-            for (i=0;i<filter.filters.length;i++)
-            {
-                field+=filter.filters[i].field;
-                
-                for(l=0;l<filter.filters[i].values.length;l++)
-                {
-                    values+=filter.filters[i].values[l];
-                    if (l<filter.filters[i].values.length-1)
-                    {
-                        values+=",";
-                    }
-                }
-                if (i<filter.filters.length-1)
-                {
-                    field+=",";
-                    values+=";";
-                }
-            }
+function getFilterUrl(element) {
+    var url = '/getDatasetDataByFilter?datasetName=' + element.getAttribute("dataSet");
+    
+    if (element.getAttribute("filter")) {
+        var filterConfig = JSON.parse(element.getAttribute("filter"));
+        addLog("filter:", filterConfig);
+
+        var view = filterConfig.view;
+        var fieldArray = [];
+        var valueArray = [];
+
+        if (view === 'standard') {
+            filterConfig.filters.forEach(filter => {
+                fieldArray.push(filter.field);
+                valueArray.push(filter.values.join(','));
+            });
+        } else if (view === 'advanced') {
+            filterConfig.filters.forEach(filter => {
+                fieldArray.push(filter.field);
+                valueArray.push(`${filter.operator}:${filter.value}`);
+            });
         }
-        if (view==='advanced')
-        {
-            /*  filter.filters.forEach(filterElement => {
-                dymaicFilter.push({field:filterElement.field,operator:filterElement.operator,value:filterElement.value});   
-                });*/
+
+        if (fieldArray.length > 0 && valueArray.length > 0) {
+            url += '&fields=' + fieldArray.join(',') + '&values=' + valueArray.join(';');
         }
-            
-        if (field!=="" && values!=="" && field!==null && values!==null && field!==undefined && values!==undefined)
-        {
-        // create query string with the filter datasetName=Dataset1&fields=HealthCare&value=Aetna PP,HMO/PPO
-        url+="&fields="+field+"&value="+values ;
-        
-        }
-    }// if filter
+    }
+    
     return url;
 }
+
 
 

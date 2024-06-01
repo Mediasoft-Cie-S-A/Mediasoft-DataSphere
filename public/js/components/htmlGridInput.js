@@ -15,7 +15,7 @@
  */
 function createGridElement(type, id) {
 
-    console.log("creategrid:"+type);
+    addLog("creategrid:"+type);
     var main= document.createElement('div');
     main.className = 'form-container row display-flex';
     main.id=type+ Date.now(); // Unique ID for each new element
@@ -48,7 +48,7 @@ function editGridElement(type,element,content)
 }
 
 function insertHtmlGrid(event) {
-    console.log('event', event.target.id);
+    addLog('event', event.target.id);
 
     const modal = document.getElementById('htmlGridModal');
     const overl = document.getElementById('overlayModal');

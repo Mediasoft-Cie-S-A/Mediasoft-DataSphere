@@ -47,11 +47,11 @@ loadJson('/elementsConfig')
                     document.body.appendChild(script);
                     scriptslist.push(scriptUrl);
                 } else {
-                    console.log('Script not found: ' + scriptUrl);
+                    addLog('Script not found: ' + scriptUrl);
                 }
             });
         }catch(err) {
-            console.log('Script not found: ' + scriptUrl);
+            addLog('Script not found: ' + scriptUrl);
         }
     }
 // Create the sidebar
@@ -79,7 +79,7 @@ function createSidebar(elementsData) {
         button.addEventListener('click', function() {
             const categoryDiv = this.parentElement;
             const height = categoryDiv.style.height;
-            console.log(height);
+            addLog(height);
             if (height === "75px") {
                 categoryDiv.style.height = 'auto';
             } else {
@@ -101,21 +101,31 @@ function createSidebar(elementsData) {
                         event.preventDefault();
                         showHint(elementData.description,3000,event);
                     })
+                    itemDiv.addEventListener('dblclick',function(event){
+                        event.preventDefault();
+                        addLog(event.target.id);
+                        // create the element
+                        var newElement = createFormElement(event.target.id);
+                                
+                                if (newElement) {
+                                    event.target.appendChild(newElement);
+                                }
+                    })
                     categoryDiv.appendChild(itemDiv);
 
                     // Check if the script exists
                     // Check if the script exists
                     // Use the function
                     var scriptUrl = "/js/components/" + elementData.scriptName;
-                  //  scriptslist.forEach(script => console.log(script));
+                  //  scriptslist.forEach(script => addLog(script));
                     var existingScript = scriptslist.find(script => script === scriptUrl);
                   
                                
                     if (!existingScript) {
-                        console.log("scriptUrl:"+scriptUrl);
+                        addLog("scriptUrl:"+scriptUrl);
                         loadScriptIfNotLoaded(scriptUrl)
                         .catch(error => {
-                            console.log('Error loading script:', error);
+                            addLog('Error loading script:', error);
                         });
                     scriptslist.push(scriptUrl);
                  }
@@ -149,7 +159,7 @@ function drop(event) {
     event.preventDefault();
 
     var elementId = event.dataTransfer.getData("text");
-    console.log("elementId:"+elementId);
+    addLog("elementId:"+elementId);
             var newElement = createFormElement(elementId);
             
             if (newElement) {
@@ -171,14 +181,14 @@ async function loadJson(url) {
 function createFormElement(elementId) {
     var element = null;
 
-        console.log(elementId);
+        addLog(elementId);
         
-        console.log(elementsData[elementId]);
+        addLog(elementsData[elementId]);
          // Execute the function
          var functionName = elementsData[elementId].createFunction;
-        console.log("functionName:"+functionName);
+        addLog("functionName:"+functionName);
          if (typeof window[functionName] === 'function') {
-            console.log("functionName:"+functionName);
+            addLog("functionName:"+functionName);
             element= window[functionName](elementId);
          }
       

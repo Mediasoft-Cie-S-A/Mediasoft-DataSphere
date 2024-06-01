@@ -94,7 +94,25 @@ class dblayer{
 // Function to execute a query on the appropriate database(s)
 async  executeQuery(databases,  sqlQuery) {
     console.log("executeQuery");
-    const dbRegex = /FROM\s+(\w+\.\w+|\w+)/gi;
+    // check if exist only one database
+    console.log(databases.length );
+    // extract keys of databases
+    const keys = Object.keys(databases);
+    console.log(keys[0]);
+
+    if (keys.length === 1) {
+        console.log("databases:"+databases[0]);
+        const db = databases[keys[0]];
+        await db.connect();
+        const result = await db.queryData(sqlQuery);
+        await db.close();
+        return result;
+    }
+
+
+    /*
+
+    const dbRegex = /FROM\s+([A-Z0-9_]+\.[A-Z0-9_]+|[A-Z0-9_]+)/i;
     const dbMatches = new Set();
     let match;
 
@@ -141,6 +159,7 @@ async  executeQuery(databases,  sqlQuery) {
     }
 
     throw new Error('No matching database found for query.');
+    */
 }
 
 // Function to adjust the SQL query for each database (if required)

@@ -1,9 +1,8 @@
 {
     "port": 3000,
     "dblist": {
-        "bidb" :"DSN=bidb;UID=sysprogress;PWD=sysprogress", 
-            "msdb" :"DSN=msdb;UID=sysprogress;PWD=sysprogress",
-            "msec" :"DSN=msec;UID=sysprogress;PWD=sysprogress"},
+        "bidb" :"DSN=bidb;UID=sysprogress;PWD=sysprogress"
+            },
     "mongoDbUrl": "mongodb://0.0.0.0:27017",
     "mongoDbName": "mshashDB",    
     "sessionSecret": "secJKDFUret",

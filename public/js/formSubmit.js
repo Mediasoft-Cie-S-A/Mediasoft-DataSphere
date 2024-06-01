@@ -14,11 +14,44 @@
  * limitations under the License.
  */
 
+// Initialize an empty log journal
+const logJournal = [];
+
+// Function to add a log entry
+function addLog(message) {
+    const timestamp = new Date().toISOString();
+    logJournal.push({ message, timestamp });
+}
+
+// Function to display the log in HTML
+function displayLog() {
+    const logContainer = document.getElementById('log-container');
+    logContainer.innerHTML = ''; // Clear previous log entries
+
+    logJournal.forEach(entry => {
+        const logEntry = document.createElement('div');
+        logEntry.classList.add('log-entry');
+        logEntry.innerHTML = `<strong>${entry.timestamp}</strong>: ${entry.message}`;
+        logContainer.appendChild(logEntry);
+    });
+    logContainer.scrollTop = logContainer.scrollHeight; // Scroll to the bottom
+    // show the log
+    logContainer.style.display = 'block';
+}
+
+// Function to hide the log
+function hideLog() {
+    const logContainer = document.getElementById('log-container');
+    logContainer.style.display = 'none';
+}
+
 // store form data in mongoDB
+
+
 
 document.getElementById('formDataForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    console.log("submit");
+    addLog("submit");
 
     var formId = document.getElementById('formId').value;
     var formName = document.getElementById('formName').value;
@@ -28,7 +61,7 @@ document.getElementById('formDataForm').addEventListener('submit', function(e) {
 
     var formContainer = document.getElementById('formContainer');
     var jsonData = domToJson(formContainer);
-    console.log(jsonData);
+    addLog(jsonData);
 
     const formData = {
         formId: formId,
@@ -73,7 +106,7 @@ document.getElementById('formDataForm').addEventListener('submit', function(e) {
         .then(response => response.json())
         .then(data => {
             showToast('Success!', 5000); // Show toast for 5 seconds
-            console.log('Success:', data);
+            addLog('Success:', data);
         })
         .catch((error) => {
             showToast('Error! ' + error, 5000); // Show toast for 5 seconds
@@ -83,6 +116,8 @@ document.getElementById('formDataForm').addEventListener('submit', function(e) {
 
 
 function showToast(message, duration = 3000) {
+
+    addLog(message);
     const toastContainer = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.classList.add('toast-message');

@@ -42,7 +42,7 @@ function editPython(type,element,content)
     const dataConfig=JSON.parse(element.getAttribute("dataConfig"));
     
     dataConfig.forEach(config => {
-      console.log(config.fieldName + ' ' + config.dataType + ' ' + config.functionName);
+      addLog(config.fieldName + ' ' + config.dataType + ' ' + config.functionName);
       addFieldToPropertiesBar(data,config);
     });
     // get lendend input
@@ -82,7 +82,7 @@ function renderPython(python)
     const fields = dataConfig.map(config => config.fieldName);
     const legend = python.getAttribute("labels-data-field");;
     var url = getFilterUrl(python);
-    console.log(url);
+    addLog(url);
     const request = new XMLHttpRequest();
     request.open("GET", url, false); // `false` makes the request synchronous
     request.send(null);

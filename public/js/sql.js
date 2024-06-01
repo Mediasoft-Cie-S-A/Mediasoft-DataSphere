@@ -50,7 +50,7 @@ var typeArray=[];
                                  window.editor.save();
                                   });
 
-    console.log('editor:', window.editor);
+    addLog('editor:', window.editor);
 // createTable list for the database editor
 function createTableListDb() {
    
@@ -65,10 +65,10 @@ function createTableListDb() {
 function dropInputTable(event)
 {
     event.preventDefault();
-    console.log("dropInputTable");
-    console.log( event.dataTransfer);
+    addLog("dropInputTable");
+    addLog( event.dataTransfer);
     var elementId = event.dataTransfer.getData("text");
-    console.log("elementId:"+elementId);
+    addLog("elementId:"+elementId);
     event.target.value=elementId;
     // generate the table diagram
     generateTableDiagram(elementId);
@@ -77,14 +77,15 @@ function dropInputTable(event)
 
 
 // excecute the query /query/:sqlQuery fetch max 20 rows
-function executeQuery(updateDS)
+function executeQuery(event)
 {
+    event.preventDefault();
     var sqlQuery=window.editor.getValue();  
     var url = '/query/'+sqlQuery;
     fetch(url)
     .then(response => response.json())
     .then(data => {
-            console.log('data:', data);
+            addLog('data:', data);
         var tableBody = document.getElementById('QueryResultTable');
        tableBody.innerHTML="";
         // create table header
@@ -123,14 +124,7 @@ function executeQuery(updateDS)
                         tr.appendChild(td);
                     });
                 });
-                if (updateDS)
-                {
-                    // get the query name
-                    var datasetName=document.getElementById('DataSetName').value;
-                    // save the query in the datasets array
-                    globalDataSets[datasetName]={ query: window.editor.getValue(), fields: fieldsArray, types: typeArray, datasetName: datasetName};
-                    saveDataset();
-                } 
+              
             }
         }
         else
@@ -149,19 +143,29 @@ function executeQuery(updateDS)
     .catch(error => console.error('Error:', error));
 }
 
-function saveQuery()
+function saveQuery(event)
 {
+    event.preventDefault();
+
+    // prevent multiple click
+    event.target.disabled=true;
+
     // execute the query
-    executeQuery(true);
-    
+ 
+            // get the query name
+            var datasetName=document.getElementById('DataSetName').value;
+            // save the query in the datasets array
+            globalDataSets[datasetName]={ query: window.editor.getValue(), fields: fieldsArray, types: typeArray, datasetName: datasetName};
+            saveDataset(event);
+            
 
    // showToast("Query saved successfully");
 }
 
 function getType(field)
 {
-    console.log('field:', field);
-   console.log('field:', !isNaN(parseFloat(field)));
+    addLog('field:', field);
+   addLog('field:', !isNaN(parseFloat(field)));
     // Check if it's a valid number
     if (!isNaN(parseFloat(field))) {
         return 'number';
@@ -178,7 +182,7 @@ function getType(field)
 }
 
 // save the dataset in the database with '/storeDataset' endpoint
-function saveDataset()
+function saveDataset(event)
 {
    
     // using datasets array
@@ -186,40 +190,43 @@ function saveDataset()
     const canvas = document.getElementById('canvas');
     for (var dataset in globalDataSets)
     {
-       // check if cavas is not null and the name of the dataset is the same of input DataSetName
-         if (canvas!=null && globalDataSets[dataset].datasetName==document.getElementById('DataSetName').value)
-        {
-            // get the diagram
-            globalDataSets[dataset].diagram={ERDTables: ERDTables, ERDLinks: ERDLinks};
-        }
-        ds={
-            query: globalDataSets[dataset].query,
-            // convert the array to json string array with JSON.stringify
-            fields: globalDataSets[dataset].fields,
-            types: globalDataSets[dataset].types,                       
-            datasetName: globalDataSets[dataset].datasetName,
-            diagram: globalDataSets[dataset].datasetName
-        }
-        // post the dataset to the server with '/storeDataset' endpoint
-      
-       console.log('ds:', ds);
-        fetch('/storeDataset', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-           
-            body: JSON.stringify(ds)
-        }).then(response => response.json())
-        .then(data => {
-           showToast('Success:'+data.message, 5000); // Show toast for 5 seconds
-        })
-        .catch((error) => {
-           showToast('Error! ' + error, 5000); // Show toast for 5 seconds
-            console.error('Error:', error);
-        });
+        // check if cavas is not null and the name of the dataset is the same of input DataSetName
+            if (canvas!=null && globalDataSets[dataset].datasetName==document.getElementById('DataSetName').value)
+            {
+                // get the diagram
+                globalDataSets[dataset].diagram={ERDTables: ERDTables, ERDLinks: ERDLinks};
+            
+            ds={
+                query: globalDataSets[dataset].query,
+                // convert the array to json string array with JSON.stringify
+                fields: globalDataSets[dataset].fields,
+                types: globalDataSets[dataset].types,                       
+                datasetName: globalDataSets[dataset].datasetName,
+                diagram: globalDataSets[dataset].datasetName
+            }
+            // post the dataset to the server with '/storeDataset' endpoint
+        
+        addLog('ds:', ds);
+            fetch('/storeDataset', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            
+                body: JSON.stringify(ds)
+            }).then(response => response.json())
+            .then(data => {
+            showToast('Success:'+data.message, 5000); // Show toast for 5 seconds
+            // reactivate the button
+                event.target.disabled=false;
+            })
+            .catch((error) => {
+            showToast('Error! ' + error, 5000); // Show toast for 5 seconds
+                console.error('Error:', error);
+            });
 
-        updateDataset(ds);
+            updateDataset(ds);
+        }
     }
 }
 
@@ -236,7 +243,7 @@ function updateDataset(ds)
         modificationDate: new Date(),
         creationDate: new Date()
        };
-         console.log('datasetDataPost:', datasetDataPost);
+         addLog('datasetDataPost:', datasetDataPost);
         // post the dataset to the server with '/storeDatasetData' endpoint
         fetch('/storeDatasetData', {
             method: 'POST',
@@ -246,7 +253,7 @@ function updateDataset(ds)
             body: JSON.stringify(datasetDataPost)
         }).then(response => response.json())
         .then(data => {
-            console.log('data:', data);
+            addLog('data:', data);
             showToast('Success:'+data.message, 5000); // Show toast for 5 seconds
         })
         .catch((error) => {
@@ -294,7 +301,7 @@ function createTableList(list,datasets) {
                      else   if (event.target.classList.contains('table-item') ) {
                     // get the search filter value
                     var searchFilter = document.getElementById('dataSetSearchFilter').value.toLowerCase();
-                    console.log(searchFilter);
+                    addLog(searchFilter);
 
                     fields= event.target.getAttribute('key');
                     const tableName = event.target.getAttribute('data-table-name');
@@ -342,7 +349,7 @@ function dataSetSearchField()
 {
     // get the list of datasets div
     var dataSetsList=document.getElementById("tablesList").querySelectorAll('.table-item');
-    console.log(dataSetsList)
+    addLog(dataSetsList)
     // for each item in the list simulate click
     dataSetsList.forEach(dataset => {
         dataset.click();
@@ -354,14 +361,14 @@ function dataSetSearchField()
 function getDatasets()
 {
     
-    console.log('getDatasets');
+    addLog('getDatasets');
     fetch('/getAllDatasets')
     .then(response => response.json())
     .then(datasets => {
         var options = [];
         datasets.forEach(dataset => {
             // add the dataset to the datasets array
-            console.log('dataset:', dataset);
+            addLog('dataset:', dataset);
           
             globalDataSets[dataset.datasetName]={ 
                 query: dataset.query, 
@@ -374,14 +381,14 @@ function getDatasets()
                 createTableList(document.getElementById('tablesList'),globalDataSets);  
                });
                var datasetList= document.getElementById('DataSetList');
-               console.log('datasetList:', datasetList);
+               addLog('datasetList:', datasetList);
                 datasetList.innerHTML="";
                 options.forEach(option => {
                     var opt = document.createElement('option');
                     opt.value = option;
                     opt.textContent = option;
                     datasetList.appendChild(opt);
-                    console.log('opt:', opt);
+                    addLog('opt:', opt);
                 });
             }).catch(error => showToast('Error:' + error, 5000)); // Show toast for 5 seconds
    
@@ -406,14 +413,14 @@ function getDatasets()
     
      
       // assing ERDTables and ERDLinks from dataset.diagram
-      console.log('dataset.diagram:', dataset.diagram);
+      addLog('dataset.diagram:', dataset.diagram);
       if (dataset.diagram)
         {
 
         ERDTables=dataset.diagram.ERDTables!=null?dataset.diagram.ERDTables:[ERDTables];
         ERDLinks=dataset.diagram.ERDLinks!=null?dataset.diagram.ERDLinks:ERDLinks;
-        console.log('ERDTables:', ERDTables);
-        console.log('ERDLinks:', ERDLinks);
+        addLog('ERDTables:', ERDTables);
+        addLog('ERDLinks:', ERDLinks);
         // generate the diagram
         drawAll();
         }
@@ -422,8 +429,8 @@ function getDatasets()
   function editTableFieldList(language,tables,links)
   {
     const editTableFields = document.getElementById('TableEdit');
-    console.log('editTableFields:', editTableFields);
-    console.log('tables:', tables);
+    addLog('editTableFields:', editTableFields);
+    addLog('tables:', tables);
     var sqlEditorTable=[];
     // for each table
     // get table key, value
@@ -520,7 +527,7 @@ function generateSQLByEditFields(tables,links)
     {
         // check if exists the link between the tables
         var svgDiagram = document.getElementById('svgDiagram');
-        console.log(links);
+        addLog(links);
         if (links.length>0)
         {
             links.forEach(link => {

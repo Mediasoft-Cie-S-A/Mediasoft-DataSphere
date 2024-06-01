@@ -15,6 +15,7 @@
  */
 
 const { error } = require('console');
+const { stringify } = require('querystring');
 
 module.exports = function(app, client, dbs,dbName) {
     const checkAuthenticated = (req, res, next) => {
@@ -193,6 +194,7 @@ app.post('/storeDataset', async (req, res) => {
 
 app.post('/storeDatasetData', async (req, res) => {
 
+    // prevent multiple requests
     
         
         if (!req.body.datasetName || !req.body.sqlQuery) {
@@ -201,10 +203,40 @@ app.post('/storeDatasetData', async (req, res) => {
         }
         
        
-        try {
-          
+        try {        
+            const keys = Object.keys(dbs.databases);
+            const db = dbs.databases[keys[0]];
+           console.log(db);
+
+            const config= {
+                dsn: db.connectionString,
+                collectionName: req.body.datasetName,
+                query: req.body.sqlQuery
+            }
+            console.log(config);
+          // convert the object to base64
+            const configBase64 = Buffer.from(JSON.stringify(config)).toString('base64');
+
+           // call esterna programma ETL/ETLOE2Mongo.exe and pass the configBase64
+            const { exec } = require('child_process');
+            // get current directory
+            const currentDir = __dirname;
+            exec(currentDir+'/ETL/ETLOE2Mongo.exe '+configBase64, (error, stdout, stderr) => {
+                if (error) {
+                    console.error(`exec error: ${error}`);
+                    return;
+                }
+                console.log(`stdout: ${stdout}`);
+                console.error(`stderr: ${stderr}`);
+            });
              
-        
+            //if stdout contains Load Completed
+            if (stdout.includes('Load Completed')) {
+                res.send({ message: 'Dataset data stored successfully' });
+            } else {    
+                res.status(500).send({ error: 'Error storing data' });
+            }
+            /*
              const data = await dbs.executeQuery(dbs.databases,req.body.sqlQuery);
              
              console.log(data.length);
@@ -219,7 +251,7 @@ app.post('/storeDatasetData', async (req, res) => {
         
              const result = await collection.insertMany(data);
             res.send({ message: 'Dataset data stored successfully', _id: result.insertedIds});
-          
+            */
         } catch (err) {
             console.error(err);
             res.status(500).send({Error: ' executing query'});
@@ -280,16 +312,17 @@ app.get('/getDatasetDataDistinct/:datasetName/:field', async (req, res) => {
 });
 
 
+
 // get dataset data by dataset name and filter
 app.get('/getDatasetDataByFilter', async (req, res) => {
     try {
         console.log(req.query);
        
-        const { datasetName, fields, value, groups, agg, funct } = req.query;
+        const { datasetName, fields, values, groups, agg, funct } = req.query;
         if (!datasetName ) {
             return res.status(400).send({ error: 'Missing required parameters' });
           }
-          const results = await filterDocuments(datasetName, fields, value, groups, agg, funct);
+          const results = await filterDocuments(datasetName, fields, values, groups, agg, funct);
          
           res.status(200).json(results);
         } catch (err) {
@@ -300,111 +333,111 @@ app.get('/getDatasetDataByFilter', async (req, res) => {
 );
             
 
+// Filter documents in a collection based on the given fields and values
+// Function to filter documents in a collection
 async function filterDocuments(datasetName, fields, values, groups, agg, funct) {
     try {
         await client.connect();
         const db = client.db(dbName);
         const collection = db.collection(datasetName);
-        const pipeline = [ ];
-      // Split values by comma and trim whitespace
-      if (fields && values) {
+        const pipeline = [];
+
+        // Split values by comma and trim whitespace
+        if (fields && values) {
             const valuesArray = values.split(';').map(value => value.trim());
             const fieldsArray = fields.split(',').map(value => value.trim());
-            //  console.log(valueArray);
+
             // Dynamically construct the query based on fields and values
-            let query = {};
+            let conditions = [];
+
             fieldsArray.forEach((field, index) => {
-            // Use $in if the corresponding value is an array, otherwise directly assign the value
-            const values = valuesArray[index].split(',');
-            query[field] =values.length>1 ? { $in: values } : values[0];
+                const values = valuesArray[index].split(',').map(value => value.trim());
+                let parsedValues = values.map(value => {
+                    if (!isNaN(value)) {
+                        return parseFloat(value); // Numeric value
+                    } else if (!isNaN(Date.parse(value))) {
+                        return new Date(value); // Date value
+                    } else {
+                        return value; // String value
+                    }
+                });
+
+                const condition = parsedValues.length > 1 ? { [field]: { $in: parsedValues } } : { [field]: parsedValues[0] };
+                conditions.push(condition);
             });
-            pipeline.push({ $match: query });
+
+            if (conditions.length === 1) {
+                pipeline.push({ $match: conditions[0] });
+            } else if (conditions.length > 1) {
+                pipeline.push({ $match: { $and: conditions } });
+            }
         }
-          // check if group by and aggregation are provided
+
+        // Check if group by and aggregation are provided
         if (groups && agg && funct) {
-            console.log(groups);
-              switch (funct) {
+            switch (funct) {
                 case 'std':
                     pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $stdDevPop: `$${agg}` } } });
-                break;
+                    break;
                 case 'distinct':
-                    // count distinct values
+                    // Count distinct values
                     pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $sum: 1 } } });
-                break;
+                    break;
                 case 'value':
                     pipeline.push({ $project: { [groups]: 1, [agg]: 1, _id: 0 } });
-                break;
+                    break;
                 case 'count':
                 case 'sum':
                 case 'avg':
                 case 'min':
-                case 'max': 
+                case 'max':
                 case 'first':
-                case 'last':                
-                     pipeline.push({ $group: { _id: `$${groups}`, [agg]: { [`$${funct}`]: `$${agg}` } } });
-                break;
-               case 'percentile':
+                case 'last':
+                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { [`$${funct}`]: `$${agg}` } } });
+                    break;
+                case 'percentile':
                     pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $push: `$${agg}` } } });
                     pipeline.push({ $project: { [agg]: { $arrayElemAt: [`$${agg}`, 0] } } });
-                break;
-                default:
-                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $sum: 1 } } });
-                break;
+                    break;
                 case 'var':
                     pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $variancePop: `$${agg}` } } });
-                break;
+                    break;
                 case 'regression':
-                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $push: `$${agg}` } } });
-                    pipeline.push({ $project: { [agg]: { $arrayElemAt: [`$${agg}`, 0] } } });
-                break;
                 case 'histogram':
-                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $push: `$${agg}` } } });
-                    pipeline.push({ $project: { [agg]: { $arrayElemAt: [`$${agg}`, 0] } } });
-                break;
                 case 'median':
-                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $push: `$${agg}` } } });
-                    pipeline.push({ $project: { [agg]: { $arrayElemAt: [`$${agg}`, 0] } } });
-                break
                 case 'mode':
-                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $push: `$${agg}` } } });
-                    pipeline.push({ $project: { [agg]: { $arrayElemAt: [`$${agg}`, 0] } } });
-                break;
                 case 'covariance':
-                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $push: `$${agg}` } } });
-                    pipeline.push({ $project: { [agg]: { $arrayElemAt: [`$${agg}`, 0] } } });
-                break;
                 case 'correlation':
-                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $push: `$${agg}` } } });
-                    pipeline.push({ $project: { [agg]: { $arrayElemAt: [`$${agg}`, 0] } } });
-                break;
-                case 'frequency':
-                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $sum: 1 } } });
-                break;
                 case 'kmeans':
                     pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $push: `$${agg}` } } });
                     pipeline.push({ $project: { [agg]: { $arrayElemAt: [`$${agg}`, 0] } } });
-                break;
+                    break;
+                case 'frequency':
+                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $sum: 1 } } });
+                    break;
+                default:
+                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $sum: 1 } } });
+                    break;
             }
-            
-           
         }
-           // const results = await collection.aggregate(pipeline).toArray();
-           console.log(pipeline);
+
+        console.log(pipeline);
 
         const options = {
-           // skip: (page - 1) * limit, // Calculate the number of documents to skip
-            limit: parseInt(1000), // Number of documents to limit the query to
-          };
-        const results = await collection.aggregate(pipeline,options).toArray();
+            limit: 1000 // Number of documents to limit the query to
+        };
+        const results = await collection.aggregate(pipeline, options).toArray();
+        console.log(results);
         return results;
     } catch (err) {
-      console.error('An error occurred:', err);
-      throw err; // Rethrow the error after logging it
-    }
-    finally {
+        console.error('An error occurred:', err);
+        throw err; // Rethrow the error after logging it
+    } finally {
         await client.close();
     }
-  }
+}
+
+
 
 
 // GET endpoint to retrieve all datasets

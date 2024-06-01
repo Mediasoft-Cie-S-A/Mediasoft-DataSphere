@@ -148,7 +148,7 @@ body {
 
 
 .category {
-   
+    display: flex;
     padding: 8px ;
     background-color: #e9e9e9;	   
     border: 1px solid #ccc;	    
@@ -156,7 +156,16 @@ body {
     cursor: pointer;	    
     user-select: none;  	    
     align-items: center;	  
+    flex-wrap: wrap !important;
+    flex-direction: row !important;
+    align-items: center;
+
     
+}
+
+.component-item{
+    width: 70px;
+    align-items: center;
 }
 
 input {
@@ -1395,4 +1404,24 @@ input.apple-switch:checked:after {
                 }
                 .controls {
                     margin: 10px;
+                }
+
+                #log-container {
+                    margin-top: 50px;
+                    display: none;
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 400px;
+                    height: 900px;
+                    overflow: auto;
+                    background-color: white;
+                    border: 1px solid black;
+                    z-index: 10000;
+                    box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.5);
+
+                }
+        
+                .log-entry {
+                    margin: 5px 0;
                 }
