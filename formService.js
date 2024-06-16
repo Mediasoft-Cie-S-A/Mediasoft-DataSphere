@@ -149,121 +149,79 @@ module.exports = function(app, client, dbs,dbName) {
     });
 
     // POST endpoint to store data
-app.post('/storeDataset', async (req, res) => {
-     try {
-         client.connect();
-         const db = client.db(dbName);
-        const collection = db.collection('datasets');
-
-        // Insert the object into the collection
-        // convert the string to json
-         // Construct form data with metadata
-         const dataset = {
-            query: req.body.query,
-            fields: req.body.fields,
-            types: req.body.types,
-            typeArray: req.body.typeArray,
-            datasetName: req.body.datasetName,
-            diagram: req.body.diagram,            
-        };
-      
-        // check if the dataset exists
-        const query = { datasetName: dataset.datasetName };
-        // Check if a document with the given datasetName exists
-        const existingDataset = await collection.findOne(query);
-        var result="error";
-        if (existingDataset) {
-             // update the document
-             result = await collection.updateOne(query, { $set: dataset });
-             res.send({ message: 'Dataset updated successfully'});
-        } else {
-             result = await collection.insertOne(dataset);
-             res.send({ message: 'Dataset stored successfully', _id: result.insertedId });
-        }     
-      
-    } catch (err) {
-        console.log(err.stack);
-        res.status(500).send("Error storing data: " + err.message);
-    } 
-    finally {
-        await client.close();
-    }
-});
-
-//store data of dataset
-
-app.post('/storeDatasetData', async (req, res) => {
-
-    // prevent multiple requests
+    app.post('/storeDataset', async (req, res) => {
+        try {
+            await client.connect();
+            const db = client.db(dbName);
+            const collection = db.collection('datasets');
     
-        
+            // Construct dataset object
+            const dataset = {
+                query: req.body.query,
+                fields: req.body.fields,
+                types: req.body.types,
+                datasetName: req.body.datasetName,
+                tables: req.body.tables,
+                links: req.body.links,
+            };
+    
+            // Check if the dataset exists
+            const query = { datasetName: dataset.datasetName };
+            const existingDataset = await collection.findOne(query);
+            
+            if (existingDataset) {
+                // Update the document
+                await collection.updateOne(query, { $set: dataset });
+                res.send({ message: 'Dataset updated successfully' });
+            } else {
+                const result = await collection.insertOne(dataset);
+                res.send({ message: 'Dataset stored successfully', _id: result.insertedId });
+            }
+        } catch (err) {
+            console.log(err.stack);
+            res.status(500).send("Error storing data: " + err.message);
+        } finally {
+            await client.close();
+        }
+    });
+    
+    app.post('/storeDatasetData', async (req, res) => {
         if (!req.body.datasetName || !req.body.sqlQuery) {
-
             return res.status(400).send({ error: 'Missing required parameters' });
         }
         
-       
-        try {        
+        try {
             const keys = Object.keys(dbs.databases);
             const db = dbs.databases[keys[0]];
-           console.log(db);
-
-            const config= {
+            
+            const config = {
                 dsn: db.connectionString,
                 collectionName: req.body.datasetName,
-                query: req.body.sqlQuery
-            }
-            console.log(config);
-          // convert the object to base64
+            };
+    
             const configBase64 = Buffer.from(JSON.stringify(config)).toString('base64');
-
-           // call esterna programma ETL/ETLOE2Mongo.exe and pass the configBase64
-            const { exec } = require('child_process');
-            // get current directory
             const currentDir = __dirname;
-            exec(currentDir+'/ETL/ETLOE2Mongo.exe '+configBase64, (error, stdout, stderr) => {
+    
+            exec(`${currentDir}/ETL/ETLOE2Mongo.exe ${configBase64}`, async (error, stdout, stderr) => {
                 if (error) {
                     console.error(`exec error: ${error}`);
-                    return;
+                    return res.status(500).send({ error: 'Error executing ETL process' });
                 }
+    
                 console.log(`stdout: ${stdout}`);
                 console.error(`stderr: ${stderr}`);
+    
+                if (stdout.includes('Load Completed')) {
+                    res.send({ message: 'Dataset data stored successfully' });
+                } else {
+                    res.status(500).send({ error: 'Error storing data' });
+                }
             });
-             
-            //if stdout contains Load Completed
-            if (stdout.includes('Load Completed')) {
-                res.send({ message: 'Dataset data stored successfully' });
-            } else {    
-                res.status(500).send({ error: 'Error storing data' });
-            }
-            /*
-             const data = await dbs.executeQuery(dbs.databases,req.body.sqlQuery);
-             
-             console.log(data.length);
-             console.log("insert in mongodb");
-             await client.connect();
-             const mongodb = client.db(dbName);
-             const collection = mongodb.collection(req.body.datasetName);
-             // check if the collection exists
-              if (collection) {
-                collection.drop();
-              }
-        
-             const result = await collection.insertMany(data);
-            res.send({ message: 'Dataset data stored successfully', _id: result.insertedIds});
-            */
         } catch (err) {
             console.error(err);
-            res.status(500).send({Error: ' executing query'});
-        } 
-
-       // insert into collection all the data in the array req.body.data
-       
-    
-    
-});
-
-
+            res.status(500).send({ Error: 'Executing query' });
+        }
+    });
 // get data of dataset
 app.get('/getDatasetData/:datasetName', async (req, res) => {
     try {
@@ -314,45 +272,45 @@ app.get('/getDatasetDataDistinct/:datasetName/:field', async (req, res) => {
 
 
 // get dataset data by dataset name and filter
-app.get('/getDatasetDataByFilter', async (req, res) => {
+app.post('/getDatasetDataByFilter', async (req, res) => {
+    console.log("getDatasetDataByFilter");
+  
     try {
-        console.log(req.query);
-       
-        const { datasetName, fields, values, groups, agg, funct } = req.query;
+        const { datasetName, groups, agg, funct } = req.query;
+     
         if (!datasetName ) {
             return res.status(400).send({ error: 'Missing required parameters' });
-          }
-          const results = await filterDocuments(datasetName, fields, values, groups, agg, funct);
-         
-          res.status(200).json(results);
-        } catch (err) {
-            res.status(500).send({ error: err.message });
         }
-      
+        //if req.body is not defined, set it to an empty object
+        const filters = req.body.filters || [];
+        // if req.body.view is not defined, set it to empty string
+        const view = req.body.view || '';
+        // if req.body.columns is not defined, set it to an empty array
+        const columns = req.body.columns || [];
+        // if req.body.pivot is not defined, set it to an empty array
+        const pivot = req.body.pivot || [];
+
+        const results = await filterDocuments(datasetName, view, filters, columns, pivot);
+        res.status(200).json(results);
+    } catch (err) {
+        res.status(500).send({ error: err.message });
     }
-);
-            
+});
 
 // Filter documents in a collection based on the given fields and values
 // Function to filter documents in a collection
-async function filterDocuments(datasetName, fields, values, groups, agg, funct) {
+async function filterDocuments(datasetName, view, filters,  columns, pivot) {
     try {
         await client.connect();
         const db = client.db(dbName);
         const collection = db.collection(datasetName);
         const pipeline = [];
 
-        // Split values by comma and trim whitespace
-        if (fields && values) {
-            const valuesArray = values.split(';').map(value => value.trim());
-            const fieldsArray = fields.split(',').map(value => value.trim());
-
-            // Dynamically construct the query based on fields and values
+        // Construct the query based on the view type
+        if (view === 'standard') {
             let conditions = [];
-
-            fieldsArray.forEach((field, index) => {
-                const values = valuesArray[index].split(',').map(value => value.trim());
-                let parsedValues = values.map(value => {
+            filters.forEach(filter => {
+                const values = filter.values.map(value => {
                     if (!isNaN(value)) {
                         return parseFloat(value); // Numeric value
                     } else if (!isNaN(Date.parse(value))) {
@@ -362,7 +320,29 @@ async function filterDocuments(datasetName, fields, values, groups, agg, funct) 
                     }
                 });
 
-                const condition = parsedValues.length > 1 ? { [field]: { $in: parsedValues } } : { [field]: parsedValues[0] };
+                const condition = values.length > 1 ? { [filter.field]: { $in: values } } : { [filter.field]: values[0] };
+                conditions.push(condition);
+            });
+
+            if (conditions.length === 1) {
+                pipeline.push({ $match: conditions[0] });
+            } else if (conditions.length > 1) {
+                pipeline.push({ $match: { $and: conditions } });
+            }
+        } else if (view === 'advanced') {
+            let conditions = [];
+            filters.forEach(filter => {
+                let value;
+                if (!isNaN(filter.value)) {
+                    value = parseFloat(filter.value); // Numeric value
+                } else if (!isNaN(Date.parse(filter.value))) {
+                    value = new Date(filter.value); // Date value
+                } else {
+                    value = filter.value; // String value
+                }
+
+                const condition = { [filter.field]: { [`${convertOperator(filter.operator)}`]: value } };
+                console.log(condition);
                 conditions.push(condition);
             });
 
@@ -373,52 +353,64 @@ async function filterDocuments(datasetName, fields, values, groups, agg, funct) 
             }
         }
 
-        // Check if group by and aggregation are provided
-        if (groups && agg && funct) {
-            switch (funct) {
-                case 'std':
-                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $stdDevPop: `$${agg}` } } });
-                    break;
-                case 'distinct':
-                    // Count distinct values
-                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $sum: 1 } } });
-                    break;
-                case 'value':
-                    pipeline.push({ $project: { [groups]: 1, [agg]: 1, _id: 0 } });
-                    break;
-                case 'count':
-                case 'sum':
-                case 'avg':
-                case 'min':
-                case 'max':
-                case 'first':
-                case 'last':
-                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { [`$${funct}`]: `$${agg}` } } });
-                    break;
-                case 'percentile':
-                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $push: `$${agg}` } } });
-                    pipeline.push({ $project: { [agg]: { $arrayElemAt: [`$${agg}`, 0] } } });
-                    break;
-                case 'var':
-                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $variancePop: `$${agg}` } } });
-                    break;
-                case 'regression':
-                case 'histogram':
-                case 'median':
-                case 'mode':
-                case 'covariance':
-                case 'correlation':
-                case 'kmeans':
-                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $push: `$${agg}` } } });
-                    pipeline.push({ $project: { [agg]: { $arrayElemAt: [`$${agg}`, 0] } } });
-                    break;
-                case 'frequency':
-                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $sum: 1 } } });
-                    break;
-                default:
-                    pipeline.push({ $group: { _id: `$${groups}`, [agg]: { $sum: 1 } } });
-                    break;
-            }
+        // Add the pivot field to the group by and aggregation if provided
+        if (pivot.length > 0) {
+            const pivotField = pivot[0].fieldName;
+            const pivotFunction = pivot[0].functionName;
+
+            // Construct group and projection stages for pivot
+            pipeline.push({
+                $group: {
+                    _id: `$${pivotField}`,
+                    data: { $push: '$$ROOT' }
+                }
+            });
+
+            pipeline.push({
+                $unwind: '$data'
+            });
+
+            columns.forEach(column => {
+                pipeline.push({
+                    $group: {
+                        _id: {
+                            pivot: `$_id`,
+                            column: `$data.${column.fieldName}`
+                        },
+                        value: { [`$${pivotFunction}`]: `$data.${column.fieldName}` }
+                    }
+                });
+            });
+
+            pipeline.push({
+                $group: {
+                    _id: '$_id.pivot',
+                    values: {
+                        $push: {
+                            k: '$_id.column',
+                            v: '$value'
+                        }
+                    }
+                }
+            });
+
+            pipeline.push({
+                $project: {
+                    pivot: '$_id',
+                    values: { $arrayToObject: '$values' },
+                    _id: 0
+                }
+            });
+        }
+
+        // Create a projection to include only the specified columns
+        const projection = columns.reduce((proj, col) => {
+            proj[col.fieldName] = 1;
+            return proj;
+        }, {});
+
+        if (Object.keys(projection).length > 0) {
+            pipeline.push({ $project: projection });
         }
 
         console.log(pipeline);
@@ -427,7 +419,6 @@ async function filterDocuments(datasetName, fields, values, groups, agg, funct) 
             limit: 1000 // Number of documents to limit the query to
         };
         const results = await collection.aggregate(pipeline, options).toArray();
-        console.log(results);
         return results;
     } catch (err) {
         console.error('An error occurred:', err);
@@ -438,6 +429,41 @@ async function filterDocuments(datasetName, fields, values, groups, agg, funct) 
 }
 
 
+
+// function to convert the operator to mongodb operator
+function convertOperator(operator) {
+    switch (operator) {
+        case '=':
+            return '$eq';
+        
+        case '!=':
+            return '$ne';
+        
+        case '>':
+            return '$gt';
+        
+        case '>=':
+            return '$gte';
+        
+        case '<':
+            return '$lt';
+        
+        case '<=':
+            return '$lte';
+        
+        case 'in':
+            return '$in';
+        
+        case 'not in':
+            return '$nin';
+        
+        case 'like':
+            return '$regex';
+        
+        default:
+            return '$eq';        
+    }
+}
 
 
 // GET endpoint to retrieve all datasets

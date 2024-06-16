@@ -49,6 +49,17 @@
         "styles": "chart.css",
         "image": "img/bubble.png"
     },
+    
+    "Treemap": {
+        "type": "treemapChart",
+        "description": "Treemap",
+        "category": "Charts",
+        "scriptName": "chart.js",
+        "createFunction": "createElementChart",
+        "editFunction": "editElementChart",
+        "styles": "chart.css",
+        "image": "img/treemap.png"
+    },
     "radarChart": {
         "type": "radarChart",
         "description": "Radar Chart",
@@ -129,16 +140,7 @@
         "styles": "tab.css",
         "image": "img/tab.png"
     },
-    "ProgressBar": {
-        "type": "ProgressBar",
-        "description": "Progress Bar",
-        "category": "HTML",
-        "scriptName": "progressBar.js",
-        "createFunction": "createProgressBar",
-        "editFunction": "editProgressBar",
-        "styles": "progressBar.css",
-        "image": "img/progress-bar.png"
-    },
+   
     "Panel": {
         "type": "Panel",
         "description": "Panel",

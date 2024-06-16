@@ -21,6 +21,7 @@ const logJournal = [];
 function addLog(message) {
     const timestamp = new Date().toISOString();
     logJournal.push({ message, timestamp });
+    console.log(`${message}`);
 }
 
 // Function to display the log in HTML

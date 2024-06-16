@@ -165,7 +165,7 @@ function loadFormData(formId,renderContainer=document.getElementById('renderForm
             userCreated.value=form.userCreated;
             
             
-            clearCharts();
+            chartManager.clearCharts();
             renderContainer.innerHTML = '';
 
             // Convert JSON back to DOM and append
@@ -180,7 +180,7 @@ function loadFormData(formId,renderContainer=document.getElementById('renderForm
                 // get the chart type
                 var chartType = chart.getAttribute('tagname');
                 // get the chart data
-                                // generate the chart
+             // generate the chart
                 generateChart(chartNumber,chartType,chart);
             });
              
@@ -234,7 +234,7 @@ function generateChart(chartNumber,type,element)
 
     }
 
-    chartList[chartNumber] = new Chart(ctx, {
+    chartManager.chartList[chartNumber] = new Chart(ctx, {
         type: typeChart,
         data: {
             labels: [],
@@ -249,5 +249,5 @@ function generateChart(chartNumber,type,element)
         }
     });
 
-    renderData(element);
+    chartManager.renderData(element);
 }

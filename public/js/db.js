@@ -67,7 +67,17 @@ function dragTable(ev) {
     
     const database = ev.target.getAttribute('data-db-name');
     const table = ev.target.getAttribute('data-table-name');
-    ev.dataTransfer.setData("text/plain", JSON.stringify({ database, table }));
+    const query = ev.target.getAttribute('query');
+    // check if database and table are not null
+    if (database && table) {
+        console.log('databae and table:', database, table);
+
+        ev.dataTransfer.setData("text/plain", JSON.stringify({ database, table }));
+    }
+    if (table && query) {
+        console.log('table and query:', table, query);
+        ev.dataTransfer.setData("text/plain", JSON.stringify({ table, Dataset: true }));
+    }
 }
 
 function searchTable(event,value) {

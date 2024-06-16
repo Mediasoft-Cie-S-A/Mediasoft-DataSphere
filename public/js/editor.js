@@ -257,15 +257,6 @@ formContainer.addEventListener('click', function(event) {
 });
 
 
-function getAbsoluteOffset(element) {
-    let top = 0, left = 0;
-   do {
-        top += element.offsetTop || 0;
-        left += element.offsetLeft || 0;
-        element = element.offsetParent;
-    } while(element);
-    return { top, left };
-}
 
 // showproperties of the element
 function showProperties()
@@ -306,60 +297,54 @@ function dropInput(event) {
     event.preventDefault();
 
     addLog("dropInput");
-    //  addLog( event.dataTransfer);
-    var elementId = event.dataTransfer.getData("text");
-    //addLog("elementId:"+elementId);
-  
+    addLog( event.dataTransfer);
+    // get data from the drag event in json format
+
+    var dataset = JSON.parse( event.dataTransfer.getData("text/plain"));
+    const datasetname=dataset.datasetName;
+        const field=dataset.field;
+        const type=dataset.type;
+    console.log(datasetname);
+    console.log(field);
+    console.log(type);  
     // get the element source 
-    var element = document.getElementById(elementId);
-    var type=element.getAttribute("dataType");
-  //  var query=element.getAttribute("query");
-    var dataset=element.getAttribute("data-table-name");
-   // addLog("type:"+type);
-   // addLog("query:"+query);
-    // set the type and query in the destination element
-    event.target.setAttribute("dataType",type);
-  //  event.target.setAttribute("query",query);
-    event.target.setAttribute("dataSet",dataset);
+  
+    event.target.setAttribute("dataset",dataset.datasetName);
     // split the elementId to get the table name and field name
-    
-    const elements=elementId.split(".");
-    addLog(elements);
-    if (elements.length>1)
+    if (datasetname&&field&&type )
     {
         // get ObjectType
-        var oType= event.target.getAttribute("ObjectType");
+        const oType= event.target.getAttribute("ObjectType");
         // if the object type is not null set the dataset and field
-        var dataset=elements[0];
-        var field=elements[1];
         switch (oType)
         {
             case "labels":
-            event.target.value=elementId;                 
-         
+            console.log("labels");
             event.target.value=field;
+            event.target.setAttribute("dataType",type);
             // get the dataType
            
             var select= event.target.parentNode.querySelector("select");
             // if the select element exists
-            if (select)
+            if (select && type)
             {
-                // remove all the options
-                removeAllChildNodes(select);
                 // create the option
-                 setOptionsByType(select,type);
+                setOptionsByType(select,type);
+                console.log(select);
+
             }
             break;
             case "data":
               // generate the input element
               // get the field type
-                let config = {fieldName:field,dataType:type,dataset:dataset,functionName:"value"};
+                let config = {fieldName:field,dataType:type,dataset:datasetname,functionName:"value"};
                 addFieldToPropertiesBar(event.target,config);
             break;
             case "filters":
                 // generate the input element
                 // get the field type
                 event.target.value=field;
+                event.target.setAttribute("dataType",type);
                 
             break;
 
@@ -367,7 +352,11 @@ function dropInput(event) {
         
     }
     else
-        event.target.value=elementId;
+    {
+        event.target.value=field;
+        event.target.setAttribute("dataType",type);
+
+    }
     // dispatch the input event
     event.target.dispatchEvent(new InputEvent("input"));
      
@@ -376,4 +365,451 @@ function dropInput(event) {
 // function to remove the item from the data object 
 function removeItem(event) {
     event.target.parentNode.remove();
+}
+
+
+ // function to adding new fileds to the properties bar
+function addFieldToPropertiesBar(target,config)
+{
+ 
+    var dataObjet=target;
+    // create the div
+    var div = document.createElement("div");
+    div.classList.add("selected-item");
+    const elementId=field+"-"+Date.now();
+    div.id=elementId;
+    // get field name
+    var field=config.fieldName;
+    var dataType=config.dataType;
+    var functionName=config.functionName;
+    var dataset=config.dataset;
+    console.log("field:"+field);
+    // create the span
+    div.innerHTML=`<button class="remove-item" onclick="removeItem(event)">x</button><span name="dataContainer" data-field-name="${field}" data-type="${dataType}" dataset="${dataset}">${field}</span>`;
+    dataObjet.appendChild(div);
+  
+    // generate the select
+    var select = document.createElement("select");
+    div.appendChild(select);
+    // get the datatype
+    
+    setOptionsByType(select,dataType);
+    // select the functionName in the function
+    select.value=functionName;   
+      
+      // get the parent div height
+      var height=dataObjet.clientHeight + div.clientHeight;
+      // set the height of the parent div
+      dataObjet.style.height=height+30+"px";  
+}
+
+// Function to initialize the filter box
+function createFilterBox(main) {
+    var div = document.createElement("div");
+    div.id = 'filterBox';
+    
+    var lbl = document.createElement("label");
+    lbl.setAttribute("for", div.id);
+    lbl.textContent = "Filter:";
+    div.appendChild(lbl);
+
+    // Add button to add a new filter
+    var addButton = document.createElement("button");
+    addButton.innerHTML = '<i class="fa fa-plus"></i>';
+    addButton.onclick = function() {
+        const filterBoxContainer = main.querySelector('#filterBoxContainer');
+        filterBoxContainer.appendChild(createFilterField(main));
+    };
+    div.appendChild(addButton);
+
+    // Clear button for the filter with icon
+    var clearButton = document.createElement("button");
+    clearButton.innerHTML = '<i class="fa fa-trash"></i>';
+    clearButton.onclick = function() {
+        const chart = document.getElementById(main.getAttribute("elementId"));
+        chart.removeAttribute("filter");
+        const filterBoxContainer = main.querySelector('#filterBoxContainer');
+        filterBoxContainer.innerHTML = '';
+        const viewSelect = main.querySelector('#viewSelect');
+        switchView(event, main, viewSelect.value);
+    };
+    div.appendChild(clearButton);
+
+    // Create container for the filter box
+    const filterBoxContainer = document.createElement('div');
+    filterBoxContainer.id = 'filterBoxContainer';
+
+    // Create the view select dropdown
+    const viewSelect = document.createElement('select');
+    viewSelect.id = 'viewSelect';
+    ['standard', 'advanced'].forEach(view => {
+        const option = new Option(view, view);
+        viewSelect.options.add(option);
+    });
+
+    // Append the view select to the container
+    div.appendChild(viewSelect);
+
+    // Event listener for changing views
+    viewSelect.addEventListener('change', function(event) {
+        switchView(event, main, this.value);
+    });
+    div.appendChild(filterBoxContainer);
+
+    // Create button to apply filter
+    const generateJsonBtn = document.createElement('button');
+    generateJsonBtn.textContent = 'Apply';
+    generateJsonBtn.setAttribute("onclick", "generateJson(event,'" + main.id + "')");
+    div.appendChild(generateJsonBtn);
+
+    return div;
+}
+
+// Function to create individual filter fields
+function createFilterField(main) {
+    const container = document.createElement('div');
+    container.className = 'filterField';
+
+    const textField = document.createElement('input');
+    textField.placeholder = 'Field';
+    textField.name = 'field';
+    textField.setAttribute('ObjectType', 'filters');
+    textField.setAttribute('ondragover', 'allowDrop(event)');
+    textField.setAttribute('ondrop', 'dropInput(event)');
+
+    container.appendChild(textField);
+
+    // Create and append input fields based on view
+    const viewSelect = main.querySelector('#viewSelect').value;
+    if (viewSelect === 'standard') {
+        const multiSelect = document.createElement('select');
+        multiSelect.multiple = true;
+
+        textField.addEventListener('input', function(event) {
+            const dataset = this.getAttribute('dataset');
+            const url = '/getDatasetDataDistinct/' + dataset + '/' + this.value;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    multiSelect.innerHTML = '';
+                    data.forEach(value => {
+                        var opt = document.createElement('option');
+                        opt.value = value;
+                        opt.innerHTML = value;
+                        multiSelect.appendChild(opt);
+                    });
+
+                    const chart = document.getElementById(main.getAttribute("elementId"));
+                    if (chart.getAttribute("filter")) {
+                        var filterConfig = JSON.parse(chart.getAttribute("filter"));
+                        var filter = filterConfig.filters[0];
+                        filter.values.forEach(val => {
+                            for (let option of multiSelect.options) {
+                                if (option.value === val) option.selected = true;
+                            }
+                        });
+                    }
+                });
+        });
+
+        container.appendChild(multiSelect);
+    } else if (viewSelect === 'advanced') {
+        const operatorSelect = document.createElement('select');
+        ['=', '!=', '<', '>', '>=', '<='].forEach(op => {
+            const option = new Option(op, op);
+            operatorSelect.options.add(option);
+        });
+
+        const valueInput = document.createElement('input');
+        valueInput.placeholder = 'Value';
+
+        container.appendChild(operatorSelect);
+        container.appendChild(valueInput);
+    }
+
+    return container;
+}
+
+// Function to switch views
+function switchView(event, main, view) {
+    event.preventDefault();
+    const container = main.querySelector('#filterBoxContainer');
+    container.innerHTML = '';
+
+    const addFilterField = createFilterField(main);
+    container.appendChild(addFilterField);
+}
+  
+ // Function to collect data and generate JSON
+function generateJson(event, mainId) {
+    event.preventDefault();
+    addLog("generateJson");
+    addLog(mainId);
+    
+    const main = document.getElementById(mainId);
+    const viewSelect = main.querySelector('#viewSelect');
+    if (!viewSelect) return;
+    
+    const view = viewSelect.options[viewSelect.selectedIndex].value;
+    let filterInfo = { view: view, filters: [] };
+    
+    const filterFields = main.querySelectorAll('#filterBoxContainer .filterField');
+
+    filterFields.forEach(filterField => {
+       
+        const fieldInput = filterField.querySelector('input[name="field"]');
+        const dataType = fieldInput.getAttribute('dataType');
+        
+        if (view === 'standard') {
+            const multiSelect = filterField.querySelector('select');
+            const selectedOptions = Array.from(multiSelect.selectedOptions).map(option => option.value);
+            let filterValues = [];
+
+            switch (dataType) {
+                case 'string':
+                    filterValues = selectedOptions;
+                    break;
+                case 'number':
+                    filterValues = selectedOptions.map(option => parseFloat(option));
+                    break;
+                case 'date':
+                    filterValues = selectedOptions.map(option => new Date(option));
+                    break;
+            }
+
+            filterInfo.filters.push({
+                field: fieldInput.value,
+                dataset: fieldInput.getAttribute('dataset'),
+                type: dataType,
+                operator: '',
+                value: '',
+                values: filterValues
+            });
+
+        } else if (view === 'advanced') {
+            const operatorSelect = filterField.querySelector('select');
+            const valueInput = filterField.querySelector('input[placeholder="Value"]');
+            let value = null;
+
+            switch (dataType) {
+                case 'string':
+                    value = valueInput.value;
+                    break;
+                case 'number':
+                    value = parseFloat(valueInput.value);
+                    break;
+                case 'date':
+                    value = new Date(valueInput.value);
+                    break;
+            }
+
+            filterInfo.filters.push({
+                field: fieldInput.value,
+                dataset: fieldInput.getAttribute('dataset'),
+                type: dataType,
+                operator: operatorSelect.value,
+                value: value,
+                values: []
+            });
+        }
+    });
+
+    const chart = document.getElementById(main.getAttribute("elementId"));
+    chart.setAttribute("filter", JSON.stringify(filterInfo));
+
+    // Display the JSON for demonstration purposes
+    console.log(JSON.stringify(filterInfo));
+
+    // Here you could also send the JSON to a server, save it, or use it in some other way
+    // For example:
+    // fetch('/api/filters', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(filterInfo) });
+}
+
+ // Function to regenerate filters from JSON
+function regenerateFilters(content, filterConfig) {
+    if (!filterConfig) return;
+    switchView(event, content, filterConfig.view); // Ensure the correct view is set
+    
+    if (filterConfig.filters.length > 0) {
+        filterConfig.filters.forEach(filter => {
+            const filterBoxContainer = content.querySelector('#filterBoxContainer');
+            const filterField = createFilterField(content);
+            filterBoxContainer.appendChild(filterField);
+            
+            const textField = filterField.querySelector('input[name="field"]');
+            textField.value = filter.field;
+            textField.setAttribute('dataType', filter.type);
+            textField.setAttribute('dataset', filter.dataset);
+
+            if (filterConfig.view === 'standard') {
+                const multiSelect = filterField.querySelector('select');
+                textField.dispatchEvent(new Event('input')); // Trigger input event to populate options
+                setTimeout(() => {
+                    filter.values.forEach(val => {
+                        for (let option of multiSelect.options) {
+                            if (option.value === val) option.selected = true;
+                        }
+                    });
+                }, 1000); // Adjust timeout as needed to ensure options are populated
+            } else if (filterConfig.view === 'advanced') {
+                filterField.querySelector('select').value = filter.operator;
+                filterField.querySelector('input[placeholder="Value"]').value = filter.value;
+            }
+        });
+    }
+}
+
+  
+
+  
+
+function createSelectItem(id, label, styleProperty,text,type,attribute)
+ {
+    addLog(text);
+   
+    var div = document.createElement("div");
+    div.id = id;
+    var lbl = document.createElement("label");
+    lbl.setAttribute("for", id);
+    lbl.textContent = label;
+    
+    var select = document.createElement("select");   
+    select.id = id+"select";
+
+    
+    const input = document.createElement("input");
+    input.setAttribute("ondragover", "allowDrop(event)");
+    input.setAttribute("ondrop", "dropInput(event)");
+    input.setAttribute("readonly", "true");
+    input.setAttribute("ObjectType","labels");
+
+   
+
+    input.addEventListener('input', function(event) {
+       
+        // get type of the field
+        var dataType = this.getAttribute('dataType');
+        // empty the select
+        addLog("dataType:"+dataType);
+        addLog("select:"+select);
+        setOptionsByType(select,dataType);
+   
+    // get the object by id
+    });
+
+    div.appendChild(lbl);
+    div.appendChild(input);
+    div.appendChild(select);
+
+    return div;
+}
+
+// function get options by type
+function setOptionsByType(select,type)
+{
+    // empty the select
+    select.innerHTML = '';
+    // create the options
+    var options=[];
+    switch (type) {
+        case 'string':
+            options=['value','count','distinct'];
+            break;
+        case 'number':
+            options=['value','sum','count','avg','min','max','distinct','std','var','median','mode','percentile'];
+            break;
+        case 'date':
+            options=['value','count','distinct'];
+            break;
+        default:
+            options=['value','count','distinct'];
+            break;
+    }
+    console.log(options);
+    // add the options
+    options.forEach(option => {
+      
+        var opt = document.createElement('option');
+        opt.value = option;
+        opt.innerHTML = option;
+        select.appendChild(opt);
+    });
+    console.log(select);
+}
+
+function createMultiSelectItem(id, label, styleProperty,text,type,attribute)
+ {
+    console.log(text);
+    var div = document.createElement("div");
+    div.style.display = 'flex';
+    div.style.flexDirection = 'column';
+    div.style.padding='5px';
+    div.style.minHeight = '100px';
+    div.style.border = '1px solid #ccc';
+    // rounded corners
+    div.style.borderRadius = '5px';
+    div.id = id;
+    div.style.className = 'multi-select';
+    div.setAttribute("ObjectType","data")
+    // set draggable attribute
+    div.setAttribute("draggable", "true");
+
+    div.id = id;
+    var lbl = document.createElement("span");
+   
+    lbl.innerText   = label;
+    
+    
+
+  
+    div.setAttribute("ondragover", "allowDrop(event)");
+    div.setAttribute("ondrop", "dropInput(event)");
+ 
+    // get the object by id
+
+
+    div.appendChild(lbl);
+    //div.appendChild(multi);
+    //div.appendChild(select);
+
+    return div;
+}
+
+
+
+function getAbsoluteOffset(el) {
+    var doc  = document,
+    win  = window,
+    body = doc.body,
+
+    // pageXOffset and pageYOffset work everywhere except IE <9.
+    offsetX = win.pageXOffset !== undefined ? win.pageXOffset :
+        (doc.documentElement || body.parentNode || body).scrollLeft,
+    offsetY = win.pageYOffset !== undefined ? win.pageYOffset :
+        (doc.documentElement || body.parentNode || body).scrollTop,
+
+    rect = el.getBoundingClientRect();
+
+if (el !== body) {
+    var parent = el.parentNode;
+
+    // The element's rect will be affected by the scroll positions of
+    // *all* of its scrollable parents, not just the window, so we have
+    // to walk up the tree and collect every scroll offset. Good times.
+    while (parent !== body && parent !== null) {
+        offsetX += parent.scrollLeft;
+        offsetY += parent.scrollTop;
+        parent   = parent.parentNode;
+    }
+}
+
+return {
+    bottom: rect.bottom + offsetY,
+    height: rect.height,
+    left  : rect.left + offsetX,
+    right : rect.right + offsetX,
+    top   : rect.top + offsetY,
+    width : rect.width
+};
 }

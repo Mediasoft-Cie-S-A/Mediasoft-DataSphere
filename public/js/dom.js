@@ -82,6 +82,31 @@ function createDomElement(json, parent) {
         if (element.getAttribute('onlyEditor') === 'true') {
             element.style.display = 'none';
         }
+        if (element.getAttribute('tagname') === 'grid') {
+            updateGridData(element);
+        }
+        if (element.getAttribute('tagname') === 'chart') {
+        // generate a new chart
+        const ctx = element.querySelector(`#${canvasId}`).getContext('2d');
+        
+            chartManager.chartList.push(new Chart(ctx, {
+                type: typeChart,
+                data: {
+                    labels: [],
+                    datasets: []
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            }));
+        
+            chartManager.updateChartData(element);
+        }
+
         // Append to parent
         parent.appendChild(element);
 
@@ -116,33 +141,40 @@ function exportJson() {
     // Function to handle tab switch
     function onTabSwitch(event) {
         event.preventDefault();
-        addLog("onTabSwitch");
+        console.log("onTabSwitch");
         var target = event.target.getAttribute("href");
         removeSelection();
         hideEditMenu();
-        addLog(target);
-        if(target === '#Dashboard') {
-            getDatasets();
-           
-        }
+        console.log(target);
+        switch(target) {
+            case '#Dashboard':
+           getDatasets();
+            chartManager.chartList = [];
+            break;
+        case '#renderForm':
+                var formContainer = document.getElementById('formContainer');
+                var jsonData = domToJson(formContainer);
+                console.log(jsonData);
+                var renderContainer = document.getElementById('renderForm');
 
-        if (target === '#renderForm') {
-            var formContainer = document.getElementById('formContainer');
-            var jsonData = domToJson(formContainer);
-            addLog(jsonData);
-            var renderContainer = document.getElementById('renderForm');
+                // Clear previous content
+                renderContainer.innerHTML = '';
 
-            // Clear previous content
-            renderContainer.innerHTML = '';
+                // Convert JSON back to DOM and append
+                var domContent = jsonToDom(jsonData,renderContainer);
+                
+            break;
 
-            // Convert JSON back to DOM and append
-            var domContent = jsonToDom(jsonData,renderContainer);
-            
-        }
-        if (target === '#DatabaseForm') {
-            addLog('DatabaseForm');
-            createTableListDb();
-            getDatasets();
+        case '#DataSchemaForm':
+                getDatasets();
+                
+            break;
+
+            case '#DatabaseForm':
+                addLog('DatabaseForm');
+                createTableListDb();
+                getDatasets();
+                break;
         }
     }
 
