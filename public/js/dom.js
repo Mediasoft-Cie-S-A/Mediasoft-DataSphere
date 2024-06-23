@@ -66,6 +66,7 @@ function jsonToDom(json, parent) {
 }
 // Function to create DOM element from JSON
 function createDomElement(json, parent) {
+    const element2redner =[];
     if (json.tag) {
         // Create element for tag
         var element = document.createElement(json.tag);
@@ -79,34 +80,19 @@ function createDomElement(json, parent) {
 
         element.classList.remove('gjs-selection');
         // onlyEditor is used to hide the element in the render view
+        console.log(element.getAttribute('tagname'));
         if (element.getAttribute('onlyEditor') === 'true') {
             element.style.display = 'none';
         }
         if (element.getAttribute('tagname') === 'grid') {
-            updateGridData(element);
+           element2redner.push(element);
+         //   updateGridData(element);
         }
         if (element.getAttribute('tagname') === 'chart') {
-        // generate a new chart
-        const ctx = element.querySelector(`#${canvasId}`).getContext('2d');
         
-            chartManager.chartList.push(new Chart(ctx, {
-                type: typeChart,
-                data: {
-                    labels: [],
-                    datasets: []
-                },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            }));
-        
-            chartManager.updateChartData(element);
+            element2redner.push(element);
         }
-
+    
         // Append to parent
         parent.appendChild(element);
 
@@ -121,6 +107,43 @@ function createDomElement(json, parent) {
         var textNode = document.createTextNode(json.text);
         parent.appendChild(textNode);
     }
+
+    element2redner.forEach(element => {
+       switch (element.getAttribute('tagname')) {
+            case 'grid':
+                updateGridData(element);
+                break;
+            case 'chart':
+                // generate a new chart
+                
+        const ctx = element.querySelector(`#${canvasId}`).getContext('2d');
+        let typeChart = this.getChartType(type);
+        this.chartList.push(new Chart(ctx, {
+            type: typeChart,
+            data: {
+                labels: [],
+                datasets: []
+            },
+            options: {
+                scales: typeChart !== 'treemap' ? {
+                    y: {
+                        beginAtZero: true
+                    }
+                } : {},
+                plugins: typeChart === 'treemap' ? {
+                    legend: {
+                        display: false
+                    }
+                } : {}
+            }
+             }));
+        
+            chartManager.updateChartData(element);
+        
+        
+                break;
+            }
+        });
 }
 
 
@@ -171,7 +194,7 @@ function exportJson() {
             break;
 
             case '#DatabaseForm':
-                addLog('DatabaseForm');
+                console.log('DatabaseForm');
                 createTableListDb();
                 getDatasets();
                 break;

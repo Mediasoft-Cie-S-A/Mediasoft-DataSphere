@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 var currentElement=null;
 var elementsData=[];
 // create the sidebar menu
@@ -47,11 +46,11 @@ loadJson('/elementsConfig')
                     document.body.appendChild(script);
                     scriptslist.push(scriptUrl);
                 } else {
-                    addLog('Script not found: ' + scriptUrl);
+                    console.log('Script not found: ' + scriptUrl);
                 }
             });
         }catch(err) {
-            addLog('Script not found: ' + scriptUrl);
+            console.log('Script not found: ' + scriptUrl);
         }
     }
 // Create the sidebar
@@ -79,7 +78,7 @@ function createSidebar(elementsData) {
         button.addEventListener('click', function() {
             const categoryDiv = this.parentElement;
             const height = categoryDiv.style.height;
-            addLog(height);
+            console.log(height);
             if (height === "75px") {
                 categoryDiv.style.height = 'auto';
             } else {
@@ -103,7 +102,7 @@ function createSidebar(elementsData) {
                     })
                     itemDiv.addEventListener('dblclick',function(event){
                         event.preventDefault();
-                        addLog(event.target.id);
+                        console.log(event.target.id);
                         // create the element
                         var newElement = createFormElement(event.target.id);
                                 
@@ -122,10 +121,10 @@ function createSidebar(elementsData) {
                   
                                
                     if (!existingScript) {
-                        addLog("scriptUrl:"+scriptUrl);
+                        console.log("scriptUrl:"+scriptUrl);
                         loadScriptIfNotLoaded(scriptUrl)
                         .catch(error => {
-                            addLog('Error loading script:', error);
+                            console.log('Error loading script:', error);
                         });
                     scriptslist.push(scriptUrl);
                  }
@@ -159,7 +158,7 @@ function drop(event) {
     event.preventDefault();
 
     var elementId = event.dataTransfer.getData("text");
-    addLog("elementId:"+elementId);
+    console.log("elementId:"+elementId);
             var newElement = createFormElement(elementId);
             
             if (newElement) {
@@ -180,15 +179,14 @@ async function loadJson(url) {
 
 function createFormElement(elementId) {
     var element = null;
-
-        addLog(elementId);
-        
-        addLog(elementsData[elementId]);
+        if (elementId ==null || elementId == undefined) {
+            return null;
+        }
          // Execute the function
          var functionName = elementsData[elementId].createFunction;
-        addLog("functionName:"+functionName);
+        console.log("functionName:"+functionName);
          if (typeof window[functionName] === 'function') {
-            addLog("functionName:"+functionName);
+            console.log("functionName:"+functionName);
             element= window[functionName](elementId);
          }
       

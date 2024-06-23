@@ -1,3 +1,4 @@
+
 function createElementFilter(type){
     var main = document.createElement('div');
     main.className = 'dataSetContainer';
@@ -24,6 +25,7 @@ function editElementFilter(type, element, content){
         addLog(element.getAttribute('datasearch'));
         var target = content.querySelector('#Data');
         var jsonData = JSON.parse(element.getAttribute('datasearch'));
+        console.log(jsonData);
         jsonData.forEach(fieldJson => {
             addFieldToPropertiesBar(target, fieldJson);
         });
@@ -35,7 +37,7 @@ function updateDataSearch(main, content) {
     var jsonData = [];
     data.forEach(item => {
         var json = {
-            "fieldname": item.querySelector('span[name="dataContainer"]').getAttribute("data-field-name"),
+            "fieldName": item.querySelector('span[name="dataContainer"]').getAttribute("data-field-name"),
             "dataset": item.querySelector('span[name="dataContainer"]').getAttribute("dataset"),
             "fieldLabel": item.querySelector('span').textContent,
             "datatype": item.querySelector('span').getAttribute("data-type"),
@@ -59,18 +61,18 @@ function RenderDataSearch(main) {
 
     jsonData.forEach(field => {
         addLog(field);
-        var html = `<div class='searchMain' id='search_${field.fieldname + Date.now()}' >
-                        <div class='search' id='search_${field.fieldname}_searchDiv'>
-                            <input type='text' id='search_${field.fieldname}_input' list='searchList' placeholder='${field.fieldLabel}' autocomplete='off' 
+        var html = `<div class='searchMain' id='search_${field.fieldName + Date.now()}' >
+                        <div class='search' id='search_${field.fieldName}_searchDiv'>
+                            <input type='text' id='search_${field.fieldName}_input' list='searchList' placeholder='${field.fieldLabel}' autocomplete='off' 
                                 oninput='searchAutoComplete(event,this)' 
                                 dataset='${field.dataset}' 
-                                data-field-name='${field.fieldname}' 
+                                data-field-name='${field.fieldName}' 
                                 data-field-type='${field.datatype}' 
                                 onclick='this.parentElement.querySelector(".autocomplete-results").style.display="none"'>
-                            <button type='button' onclick='allSearch(event,"search_${field.fieldname}_input")'>
+                            <button type='button' onclick='allSearch(event,"search_${field.fieldName}_input")'>
                                 <i class='fas fa-search'></i>
                             </button>
-                            <div id='search_${field.fieldname + Date.now()}_autocomplete' class='autocomplete-results'></div>
+                            <div id='search_${field.fieldName + Date.now()}_autocomplete' class='autocomplete-results'></div>
                         </div>
                     </div>`;
         searchMainDiv.innerHTML += html;
@@ -82,57 +84,79 @@ function allSearch(event, targetID) {
     addLog("allSearch: " + targetID);
 
     var searchInputs = document.querySelectorAll('.search-container input');
-    let filters = [];
+    let filterInfo = { view: "standard", filters: [] };
 
     searchInputs.forEach(input => {
         let dataset = input.getAttribute("dataset");
         let fieldName = input.getAttribute("data-field-name");
         let datatype = input.getAttribute("data-field-type");
         let value = input.value.trim();
-
+        console.log(value);
+        console.log(fieldName);
+        console.log(dataset);
+        console.log(datatype);
         if (value) {
-            filters.push({
+            filterInfo.filters.push({
                 field: fieldName,
                 dataset: dataset,
                 type: datatype,
+                operator: '',
+                value: '',
                 values: [value]
             });
         }
     });
 
-    if (filters.length > 0) {
-        let jsonFilter = {
-            view: "standard",
-            filters: filters
-        };
-
-        var allObjects = document.querySelectorAll('[tagname]');
-        allObjects.forEach(element => {
-            if (element.getAttribute("dataset") === filters[0].dataset) {
-                element.setAttribute("filter", JSON.stringify(jsonFilter));
-
-                switch (element.getAttribute("tagname")) {
-                    case "grid":
-                        updateGridData(element);
-                        break;
-                    case "BarChart":
-                    case "LineChart":
-                    case "PieChart":
-                    case "DonutChart":
-                    case "RadarChart":
-                    case "PolarAreaChart":
-                    case "BubbleChart":
-                    case "ScatterChart":
-                        addLog("renderChart");
-                        renderData(element);
-                        break;
-                    default:
-                        break;
+    var allObjects = document.querySelectorAll('[tagname]');
+    allObjects.forEach(element => {
+        if (filterInfo.filters.length === 0)
+            return;
+        if (element.getAttribute("dataset") === filterInfo.filters[0].dataset) {
+            var jsonFilter = JSON.parse(element.getAttribute("filter"));
+            filterInfo.filters.forEach(filter => {
+                var found = false;
+                if (jsonFilter) {
+                    if (!jsonFilter.filters)
+                        jsonFilter.filters = [];
+                    jsonFilter.filters.forEach(item => {
+                        if (item.field === filter.field) {
+                            item.values = filter.values;
+                            found = true;
+                        }
+                    });
+                    if (!found) {
+                        jsonFilter.filters.push(filter);
+                    }
+                    element.setAttribute("filter", JSON.stringify(jsonFilter));
+                } else {
+                    jsonFilter = { view: "standard", filters: [] };
+                    jsonFilter.filters.push(filter);
+                    element.setAttribute("filter", JSON.stringify(jsonFilter));
                 }
+            });
+
+            switch (element.getAttribute("tagname")) {
+                case "grid":
+                    updateGridData(element);
+                    break;
+                case "BarChart":
+                case "LineChart":
+                case "PieChart":
+                case "DonutChart":
+                case "RadarChart":
+                case "PolarAreaChart":
+                case "BubbleChart":
+                case "ScatterChart":
+                    addLog("renderChart");
+                    chartManager.renderData(element);
+                    break;
+                default:
+                    break;
             }
-        });
-    }
+        }
+    });
 }
+
 
 function searchAutoComplete(event, element) {
     event.preventDefault();
@@ -170,7 +194,10 @@ function searchAutoComplete(event, element) {
         .then(data => {
             autocomplete.innerHTML = "";
             autocomplete.style.display = "block";
-            autocomplete.style.top = (parseInt(getAbsoluteOffset(element).top) + parseInt(element.offsetHeight)) + 'px';
+            autocomplete.style.position = "absolute";
+            const { top, left } = getAbsoluteOffset(element);
+            autocomplete.style.left = left + 'px';
+            autocomplete.style.top = (parseInt(top) + parseInt(element.offsetHeight)) + 'px';
             autocomplete.style.width = element.offsetWidth + 'px';
 
             data.forEach(row => {
@@ -193,12 +220,4 @@ function searchAutoComplete(event, element) {
         });
 }
 
-function getAbsoluteOffset(element) {
-    let top = 0, left = 0;
-    do {
-        top += element.offsetTop || 0;
-        left += element.offsetLeft || 0;
-        element = element.offsetParent;
-    } while (element);
-    return { top, left };
-}
+

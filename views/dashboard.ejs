@@ -34,7 +34,8 @@
                                     <li><a data-toggle="tab" href="#DashBoards">DashBoards</a></li>
                                     <li><a data-toggle="tab" href="#renderForm">Dashboard</a></li>
                                     <li><a data-toggle="tab" href="#Dashboard">DashBoard Editor</a></li>
-                                    <li><a data-toggle="tab" href="#DatabaseForm">Dateset Editor</a></li>
+                                    <li><a data-toggle="tab" href="#DataSchemaForm">MetaSchema</a></li>
+                                    <li><a data-toggle="tab" href="#DatabaseForm">ETL Editor</a></li>
                                     
                                 </ul>
                                 <span class="account-element">
@@ -175,7 +176,58 @@
                     </div><!-- End of container -->
                              
                      
-                  
+                    <div id="DataSchemaForm" class="tab-pane fade">
+                        <!-- Rendered form will be displayed here -->
+                        <div>
+                            <div>
+                                <h2>Data Schema Structure</h2>
+                            </div>
+                            <div>
+                                <table id="datasetList" class="table">
+                                    <tr>
+                                        <td>
+                                            <!-- Sidebar -->
+                                            <input type="text" id="searchDataset" onkeyup="searchDataset(event,this.value)" placeholder="Search for datasets..">
+                                            <div id="datasetListBar" class="col table-bordered" style="width: 200px; overflow: auto;">
+                                            </div>
+                                        </td>
+                                        <td style="width: 100%;">
+                                            <label for="zoom">Zoom:</label>
+                                            <input type="range" id="zoom" min="0.5" max="2" step="0.1" value="1" oninput="setZoom(this.value)">
+                                            <canvas id="schemacanvas" width="1200" height="800"></canvas>
+                                            <div id="SchemaBar" class="col table-bordered">
+                                                <div id="SchemaBarBody">
+                                                    <div style="display: flex;flex-direction: row; flex-wrap: wrap; vertical-align:bottom;padding: 10px;">
+                                                        <div>                                                            
+                                                            
+                                                            <label style="display: inline-block">Dataset Name: </label>
+                                                            <input type="text" list="DatasetList" id="DatasetName" style="width: 300px;display: inline-block" value="" placeholder="Search or insert DatasetName" onchange="loadDatasetSchemaDiagram(this.value)">
+                                                            <datalist id="DatasetList" style="width: 400px;"></datalist>
+                                                        </div>
+                                                        <div><button onclick="executeSchema(event)" style="display: inline-block">Run</button></div>
+                                                        <div><button onclick="saveSchema(event)" style="display: inline-block">Save</button></div>
+                                                    </div>
+                                                    <div id="SchemaBarBodyBody">
+                                                        <textarea id="SchemaBarBodyBodyTextArea"></textarea>
+                                                    </div>
+                                                    <div id="SchemaBarBodyFooter">
+                                                    </div>
+                                                </div>
+                                                <!-- zoom slider-->
+                                                <div id="SchemaResultTable" class="col table-bordered" style="overflow: auto; max-height: 400px;">
+                                                    Result Table
+                                                </div>
+                                            </div>
+                                        </td>
+                                        
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div> <!-- End of DataSchemaForm -->
+                    
+                
+
                     <div id="DatabaseForm" class="tab-pane fade">
                         <!-- Rendered form will be displayed here -->
                         <div >
@@ -199,7 +251,7 @@
                                       
                                         <label for="zoom">Zoom:</label>
                                         <input type="range" id="zoom" min="0.5" max="2" step="0.1" value="1" oninput="setZoom(this.value)">                                    
-                                        <canvas  id="canvas" width="1200" height="800" ></canvas>
+                                        <canvas  id="queryCanvas" width="1200" height="800" ></canvas>
                                            
                                           
                                         <div id="QueryBar" class="col table-bordered" >
@@ -250,7 +302,7 @@
                                 </table>
                             </div>
                         </div>
-                    </div>
+                    </div> <!-- End of DatabaseForm -->
                    
                 </div>
             
@@ -277,11 +329,13 @@
         </div>
     </div>
 
-    <div id="contextMenu" style="display: none; position: absolute; z-index: 1000; background-color: white; border: 1px solid #ddd; padding: 5px;">
-        <ul style="list-style: none; padding: 0; margin: 0;">
-            <li><a href="#" id="add-relation">Add Relation</a></li>
-            <li><a href="#" id="delete-table">Delete Table</a></li>
-            <li><a href="#" id="delete-link">Delete Link</a></li>
+        <!-- Context Menu -->
+    <div id="contextMenu" class="context-menu">
+        <ul>
+            <li id="add-relation">Add Relation</li>
+            <li id="delete-table">Delete Table</li>
+            <li id="delete-link">Delete Link</li>
+            <li id="edit-link">Edit Link</li>
         </ul>
     </div>
     
@@ -324,8 +378,38 @@
     </div>
     <button class="button float-right" onclick="closeHtmlGridModal()">Close</button>
 </div>
-    
 
+<!-- Popup Modal -->
+<div id="linkModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>Create Link</h2>
+      <form id="linkForm">
+        <label for="sourceTable">Source Table:</label>
+        <select id="sourceTable" name="sourceTable"></select>
+        <br>
+        <label for="sourceField">Source Field:</label>
+        <select id="sourceField" name="sourceField"></select>
+        <br>
+        <label for="targetTable">Target Table:</label>
+        <select id="targetTable" name="targetTable"></select>
+        <br>
+        <label for="targetField">Target Field:</label>
+        <select id="targetField" name="targetField"></select>
+        <br>
+        <label for="joinType">Join Type:</label>
+        <select id="joinType" name="joinType">
+          <option value="1:1">1:1 (One to One)</option>
+          <option value="*:1">*:1 (Many to One)</option>
+          <option value="1:*">1:* (One to Many)</option>
+          <option value="*:*">*:* (Many to Many)</option>
+        </select>
+        <br>
+        <button type="button" id="createLinkBtn">Create Link</button>
+      </form>
+    </div>
+  </div>
+  
 <!-- Footer -->
 <footer class="fixed-bottom mt-auto">
     <!-- Grid container -->
@@ -354,6 +438,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap"></script>
  <!-- codemirror SQL Editor-->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.58.3/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.58.3/mode/sql/sql.min.js"></script>
@@ -367,7 +452,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.58.3/addon/fold/xml-fold.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.58.3/addon/fold/indent-fold.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.58.3/addon/fold/markdown-fold.min.js"></script>
-    
     <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
   
     <script src="js/db.js"></script>

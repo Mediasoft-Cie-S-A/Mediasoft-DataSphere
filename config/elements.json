@@ -50,9 +50,9 @@
         "image": "img/bubble.png"
     },
     
-    "Treemap": {
+    "treemapChart": {
         "type": "treemapChart",
-        "description": "Treemap",
+        "description": "Treemap Chart",
         "category": "Charts",
         "scriptName": "chart.js",
         "createFunction": "createElementChart",
@@ -139,18 +139,7 @@
         "editFunction": "editElementTab",
         "styles": "tab.css",
         "image": "img/tab.png"
-    },
-   
-    "Panel": {
-        "type": "Panel",
-        "description": "Panel",
-        "category": "HTML",
-        "scriptName": "panel.js",
-        "createFunction": "createPanel",
-        "editFunction": "editPanel",
-        "styles": "panel.css",
-        "image": "img/panel.png"
     }
-    
-
+   
+  
 }

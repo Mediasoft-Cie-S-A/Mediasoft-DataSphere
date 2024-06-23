@@ -23,7 +23,7 @@ function removeAllChildNodes(parent) {
 
 
 function onchangeInput(event,styleProperty,attribute) {
-    addLog("onchange:"+this.value);    
+    console.log("onchange:"+this.value);    
              if (attribute===true)
              {   
                   updateAttribute(styleProperty, this.value);
@@ -88,16 +88,16 @@ function createInputDiv(id, labelText, onChangeFunction,text) {
 function editElement(element) {
     // Get the type of the element
      // if type is null get the element type
-     addLog("element:"+element);
-     addLog("element.tagName:"+element.tagName);
+     console.log("element:"+element);
+     console.log("element.tagName:"+element.tagName);
     var type = element.getAttribute('tagName');
         currentElement=element
         var dialog= document.getElementById("propertiesBar");
- 	dialog.style.display = 'block';         
+    	dialog.style.display = 'block';         
         var content= dialog.querySelector("div");
         content.id="propertiesContent"+type;
         content.setAttribute("elementId",element.id);
-	  content.innerHTML="";
+	     content.innerHTML="";
         // adding icon close to the dialog
         var closeIcon = document.createElement("i");
         closeIcon.className = "fa fa-close";
@@ -118,12 +118,12 @@ function editElement(element) {
         content.appendChild(label);
         content.appendChild(document.createElement('hr'));
         // Execute the function editor delcared in the components js if exists type   
-        addLog("type:"+elementsData[type]);
+        console.log("type:"+elementsData[type]);
 
         if (elementsData[type]){
             if (elementsData[type].editFunction) {
                 var functionName = elementsData[type].editFunction;
-               addLog("functionName:"+functionName);
+                console.log("functionName:"+functionName);
                 window[functionName](type,element,content);
             
             }
@@ -181,14 +181,14 @@ function updateElementTxtC(t)
 
 function updateElementStyle(type,t)
 {
-   addLog("updateElementStyle:"+type+" "+t);
+    console.log("updateElementStyle:"+type+" "+t);
     currentElement.style.setProperty(type,t);     
     
 }
 
 function updateAttribute(type,t)
 {
-   addLog("updateElementAttribute:"+type+" "+t);
+    console.log("updateElementAttribute:"+type+" "+t);
     currentElement.setAttribute(type,t);     
     
 }
@@ -233,7 +233,7 @@ formContainer.addEventListener('click', function(event) {
     event.preventDefault();
     // remove gjs-selection class from all elements
     removeSelection();
-    addLog("event.target.id:"+event.target.id);    
+    console.log("event.target.id:"+event.target.id);    
     if (event.target.id === 'formContainer') {       
         
         hideEditMenu();
@@ -296,8 +296,8 @@ function dropInput(event) {
     
     event.preventDefault();
 
-    addLog("dropInput");
-    addLog( event.dataTransfer);
+    console.log("dropInput");
+    console.log( event.dataTransfer);
     // get data from the drag event in json format
 
     var dataset = JSON.parse( event.dataTransfer.getData("text/plain"));
@@ -544,8 +544,8 @@ function switchView(event, main, view) {
  // Function to collect data and generate JSON
 function generateJson(event, mainId) {
     event.preventDefault();
-    addLog("generateJson");
-    addLog(mainId);
+    console.log("generateJson");
+    console.log(mainId);
     
     const main = document.getElementById(mainId);
     const viewSelect = main.querySelector('#viewSelect');
@@ -666,7 +666,7 @@ function regenerateFilters(content, filterConfig) {
 
 function createSelectItem(id, label, styleProperty,text,type,attribute)
  {
-    addLog(text);
+    console.log(text);
    
     var div = document.createElement("div");
     div.id = id;
@@ -691,8 +691,8 @@ function createSelectItem(id, label, styleProperty,text,type,attribute)
         // get type of the field
         var dataType = this.getAttribute('dataType');
         // empty the select
-        addLog("dataType:"+dataType);
-        addLog("select:"+select);
+        console.log("dataType:"+dataType);
+        console.log("select:"+select);
         setOptionsByType(select,dataType);
    
     // get the object by id
@@ -740,7 +740,7 @@ function setOptionsByType(select,type)
 
 function createMultiSelectItem(id, label, styleProperty,text,type,attribute)
  {
-    console.log(text);
+    console.log(id + " " + label + " " + styleProperty + " " + text + " " + type + " " + attribute);
     var div = document.createElement("div");
     div.style.display = 'flex';
     div.style.flexDirection = 'column';

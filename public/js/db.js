@@ -155,7 +155,7 @@ function loadFieldsList(fieldName)
 {
    var table= document.getElementById('TableFieldsList');
    var tableNameSelect= document.querySelector('tr[data-field-name="'+fieldName+'"] select[name="tableName"]');
-   addLog('tableNameSelect:', tableNameSelect);
+   console.log('tableNameSelect:', tableNameSelect);
    var tableName=tableNameSelect.options[tableNameSelect.selectedIndex].value;
     var select = document.querySelector('tr[data-field-name="'+fieldName+'"] select[name="fieldName"]');
     select.innerHTML = '';

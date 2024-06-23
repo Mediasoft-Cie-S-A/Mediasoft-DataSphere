@@ -52,7 +52,7 @@ function hideLog() {
 
 document.getElementById('formDataForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    addLog("submit");
+    console.log("submit");
 
     var formId = document.getElementById('formId').value;
     var formName = document.getElementById('formName').value;
@@ -62,7 +62,7 @@ document.getElementById('formDataForm').addEventListener('submit', function(e) {
 
     var formContainer = document.getElementById('formContainer');
     var jsonData = domToJson(formContainer);
-    addLog(jsonData);
+    console.log(jsonData);
 
     const formData = {
         formId: formId,
@@ -107,7 +107,7 @@ document.getElementById('formDataForm').addEventListener('submit', function(e) {
         .then(response => response.json())
         .then(data => {
             showToast('Success!', 5000); // Show toast for 5 seconds
-            addLog('Success:', data);
+            console.log('Success:', data);
         })
         .catch((error) => {
             showToast('Error! ' + error, 5000); // Show toast for 5 seconds
@@ -118,7 +118,7 @@ document.getElementById('formDataForm').addEventListener('submit', function(e) {
 
 function showToast(message, duration = 3000) {
 
-    addLog(message);
+    console.log(message);
     const toastContainer = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.classList.add('toast-message');

@@ -128,11 +128,12 @@ function saveQuery(event) {
         query: globalDataSets[datasetName].query,
         fields: globalDataSets[datasetName].fields,
         types: globalDataSets[datasetName].types,
-        tables: Object.values(globalDataSets[datasetName].diagram.ERDTables),
+        tables: globalDataSets[datasetName].diagram.ERDTables,
         links: globalDataSets[datasetName].diagram.ERDLinks
     };
 
     saveDatasetToMongoDB(dataset);
+    callStoreDatasetData(datasetName, globalDataSets[datasetName].query);
     event.target.disabled = false;
 }
 
@@ -152,6 +153,36 @@ function saveDatasetToMongoDB(dataset) {
         showToast('Error! ' + error, 5000); // Show toast for 5 seconds
         console.error('Error:', error);
     });
+}
+
+async function callStoreDatasetData(datasetName, sqlQuery) {
+    const url = '/storeDatasetData';
+    const data = {
+        datasetName: datasetName,
+        sqlQuery: sqlQuery,
+    };
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        console.log('Response:', responseData);
+
+        return responseData;
+    } catch (error) {
+        console.error('Error:', error);
+        throw error;
+    }
 }
 
 function getType(field) {
@@ -225,9 +256,9 @@ function generateSQLByEditFields(tables, links) {
         var alias = field.querySelector('input[type="text"]');
         if (checkbox.checked) {
             if (alias.value) {
-                sqlQuery += tableName + "." + fieldName + " AS " + alias.value + ", ";
+                sqlQuery += tableName + ".\"" + fieldName + "\" AS \"" + alias.value + "\", ";
             } else {
-                sqlQuery += tableName + "." + fieldName + ", ";
+                sqlQuery += tableName + ".\"" + fieldName + "\", ";
             }
         }
         sqlEditorFileds.push(tableName + "." + fieldName);

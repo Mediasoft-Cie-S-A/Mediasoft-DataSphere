@@ -16,7 +16,7 @@
 
 
 function loadForms(){
-    addLog('Loading forms...');
+    console.log('Loading forms...');
     fetch('/list-forms')
         .then(response => {
             if (!response.ok) {
@@ -125,7 +125,7 @@ function deleteForm(formId, listItem) {
             return response.json();
         })
         .then(data => {
-            addLog(data.message);
+            console.log(data.message);
             listItem.remove(); // Remove the list item from the DOM
         })
         .catch(error => {
@@ -137,7 +137,7 @@ function deleteForm(formId, listItem) {
 
 function loadFormData(formId,renderContainer=document.getElementById('renderForm'))
  {
-    addLog('Loading form data...');
+    console.log('Loading form data...');
     // clear the form
     document.getElementById('renderForm').innerHTML = '';
    
@@ -156,10 +156,10 @@ function loadFormData(formId,renderContainer=document.getElementById('renderForm
             var userCreated = document.getElementById('userCreated');
             var userModified = document.getElementById('userModified');
             // Handle the form data here
-            addLog('Form Data:', form);
+            console.log('Form Data:', form);
             // For example, display the form data in an alert or populate a form for editing
             formId.value=form.formId;
-            addLog(formId);
+            console.log(formId);
             formName.value=form.formName;
             formPath.value=form.formPath;
             userCreated.value=form.userCreated;
@@ -189,10 +189,10 @@ function loadFormData(formId,renderContainer=document.getElementById('renderForm
             // loop through the pythons
             pythons.forEach(python => {
                // render the python
-               addLog(python);
+               console.log(python);
                renderPython(python);
             }  );
-            addLog(domContent);
+            console.log(domContent);
            
         })
         .catch(error => {
