@@ -15,6 +15,7 @@
  */
 // define global variables
 var globalDataSets = [];
+var metadata = {};
 var fieldsArray = [];
 var typeArray = [];
 
@@ -208,6 +209,7 @@ function loadDataSetQueryDiagram(datasetName) {
         this.ERDTables = dataset.diagram.ERDTables != null ? dataset.diagram.ERDTables : [];
         this.ERDLinks = dataset.diagram.ERDLinks != null ? dataset.diagram.ERDLinks : [];
         drawAll();
+        
     }
 }
 
@@ -220,8 +222,11 @@ function editTableFieldList(language, tables, links) {
     for (var key in tables) {
         var table = tables[key];
         table.fields.forEach(field => {
+       
+            
             var fieldName = field.NAME;
             var tableName = table.tableName;
+            var label = field.LABEL;
             sqlEditorTable.push(tableName + "." + fieldName);
             var divID = tableName + "." + fieldName;
 
@@ -230,7 +235,7 @@ function editTableFieldList(language, tables, links) {
                 newColumn.setAttribute('class', 'field-item');
                 newColumn.setAttribute('data-table-name', tableName);
                 newColumn.setAttribute('data-table-field', fieldName);
-                newColumn.innerHTML = `${fieldName}<br/>visible:<input type="checkbox" checked onchange="generateSQLByEditFields()"/>Alias:<input type="text" onchange="generateSQLByEditFields()" />`;
+                newColumn.innerHTML = `${fieldName}<br/>visible:<input type="checkbox" checked onchange="generateSQLByEditFields()"/>Alias:<input type="text" onchange="generateSQLByEditFields()" value="${label}" />`;
                 newColumn.id = divID;
                 editTableFields.appendChild(newColumn);
             }
@@ -425,25 +430,7 @@ function createDateSetList(list, datasets) {
     }
 }
 
-// load dataset query and diagram
-function loadDataSetQueryDiagram(datasetName) {
-    fetch(`/getDataset/${datasetName}`)
-    .then(response => response.json())
-    .then(dataset => {
-        window.editor.setValue(dataset.query);
 
-        const tables = {};
-        dataset.tables.forEach(table => {
-            tables[table.tableName] = table;
-        });
-
-        this.ERDTables = tables;
-        this.ERDLinks = dataset.links;
-
-        drawAll();
-    })
-    .catch(error => console.error('Failed to load dataset:', error));
-}
 
 function drawAll() {
     // Implement this function to redraw the entire canvas with the current state of ERDTables and ERDLinks

@@ -171,8 +171,9 @@ function exportJson() {
         console.log(target);
         switch(target) {
             case '#Dashboard':
-           getDatasets();
+               getDatasets();
             chartManager.chartList = [];
+            loadSchema(false);
             break;
         case '#renderForm':
                 var formContainer = document.getElementById('formContainer');
@@ -185,12 +186,12 @@ function exportJson() {
 
                 // Convert JSON back to DOM and append
                 var domContent = jsonToDom(jsonData,renderContainer);
-                
+                loadSchema(false);
             break;
 
         case '#DataSchemaForm':
                 getDatasets();
-                
+                loadSchema(true);
             break;
 
             case '#DatabaseForm':

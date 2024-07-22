@@ -397,11 +397,21 @@ function addFieldToPropertiesBar(target,config)
     // select the functionName in the function
     select.value=functionName;   
       
-      // get the parent div height
-      var height=dataObjet.clientHeight + div.clientHeight;
-      // set the height of the parent div
-      dataObjet.style.height=height+30+"px";  
-}
+      // calculate the height of the parent div
+      var totalHeight=0;
+        for (var i = 0; i < dataObjet.children.length; i++) {
+            totalHeight += dataObjet.children[i].height + 10;
+            if (i==dataObjet.children.length-1)
+            {
+                dataObjet.children[i].style.marginBottom="30px";
+            }
+            else{
+                dataObjet.children[i].style.marginBottom="0px";
+            
+            }
+        }
+        dataObjet.style.height=totalHeight+"px";
+    }
 
 // Function to initialize the filter box
 function createFilterBox(main) {
@@ -631,6 +641,8 @@ function regenerateFilters(content, filterConfig) {
     if (!filterConfig) return;
     switchView(event, content, filterConfig.view); // Ensure the correct view is set
     
+    if (!filterConfig.filters) return;
+
     if (filterConfig.filters.length > 0) {
         filterConfig.filters.forEach(filter => {
             const filterBoxContainer = content.querySelector('#filterBoxContainer');
@@ -744,9 +756,10 @@ function createMultiSelectItem(id, label, styleProperty,text,type,attribute)
     var div = document.createElement("div");
     div.style.display = 'flex';
     div.style.flexDirection = 'column';
-    div.style.padding='5px';
+    div.style.padding='10px';
     div.style.minHeight = '100px';
     div.style.border = '1px solid #ccc';
+    
     // rounded corners
     div.style.borderRadius = '5px';
     div.id = id;
@@ -760,9 +773,6 @@ function createMultiSelectItem(id, label, styleProperty,text,type,attribute)
    
     lbl.innerText   = label;
     
-    
-
-  
     div.setAttribute("ondragover", "allowDrop(event)");
     div.setAttribute("ondrop", "dropInput(event)");
  

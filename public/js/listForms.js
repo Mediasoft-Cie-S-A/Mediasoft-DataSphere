@@ -208,7 +208,10 @@ function generateChart(chartNumber,type,element)
   // get the canvas element
     var canvas = element.querySelector('canvas');
     const ctx = canvas.getContext('2d');
-
+    // if type is not defined
+    if (!type) {
+        type = 'LineChart';
+    }
     switch (type) {
         case 'LineChart':
             typeChart='line';

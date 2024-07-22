@@ -23,7 +23,7 @@ module.exports = function(app,  client,dbName) {
 // Function to check if the database exists
 async function checkDatabaseExists() {
     try {
-        await client.connect();
+        
         const adminDb = client.db().admin();
         const dbs = await adminDb.listDatabases();
         const dbExists = dbs.databases.some(db => db.name === dbName);
@@ -35,9 +35,7 @@ async function checkDatabaseExists() {
         }
     } catch (err) {
         console.error('Error connecting to MongoDB:', err);
-    } finally {
-        await client.close();
-    }
+    } 
 }
 
 

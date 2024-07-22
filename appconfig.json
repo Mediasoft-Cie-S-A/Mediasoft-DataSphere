@@ -3,7 +3,7 @@
     "dblist": {
         "bidb" :"DSN=bidb;UID=sysprogress;PWD=sysprogress"
             },
-    "mongoDbUrl": "mongodb://0.0.0.0:27017",
+    "mongoDbUrl": "mongodb://192.168.201.25:27017",
     "mongoDbName": "mshashDB",    
     "sessionSecret": "secJKDFUret",
     "authentication": {

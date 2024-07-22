@@ -368,16 +368,20 @@ class ERD {
     }
 
     createZLink(sourceTableName, sourceFieldIndex, targetTableName, targetFieldIndex, joinType) {
+        const sourceFieldName = this.ERDTables[sourceTableName].fields[sourceFieldIndex].NAME;
+        const targetFieldName = this.ERDTables[targetTableName].fields[targetFieldIndex].NAME;
+        
         this.ERDLinks.push({
             sourceTableName,
             sourceFieldIndex,
+            sourceFieldName,
             targetTableName,
             targetFieldIndex,
+            targetFieldName,
             joinType
         });
         this.drawAll();
     }
-
     drawLinks() {
         this.ctx.shadowOffsetX = 3;
         this.ctx.shadowOffsetY = 3;
@@ -385,6 +389,7 @@ class ERD {
         this.ctx.shadowColor = 'rgba(50, 50, 150, 0.5)'; // Soft blue shadow for a glowing effect
 
         this.ERDLinks.forEach(link => {
+           
             const sourceTable = this.ERDTables[link.sourceTableName];
             const targetTable = this.ERDTables[link.targetTableName];
             const sourceField = sourceTable.fields[link.sourceFieldIndex];

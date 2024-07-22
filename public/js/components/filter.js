@@ -60,7 +60,7 @@ function RenderDataSearch(main) {
     var jsonData = JSON.parse(main.getAttribute('datasearch'));
 
     jsonData.forEach(field => {
-        addLog(field);
+        console.log(field);
         var html = `<div class='searchMain' id='search_${field.fieldName + Date.now()}' >
                         <div class='search' id='search_${field.fieldName}_searchDiv'>
                             <input type='text' id='search_${field.fieldName}_input' list='searchList' placeholder='${field.fieldLabel}' autocomplete='off' 
@@ -81,79 +81,106 @@ function RenderDataSearch(main) {
 
 function allSearch(event, targetID) {
     event.preventDefault();
-    addLog("allSearch: " + targetID);
 
     var searchInputs = document.querySelectorAll('.search-container input');
-    let filterInfo = { view: "standard", filters: [] };
+    var allObjects = document.querySelectorAll('[dataconfig]');
 
-    searchInputs.forEach(input => {
-        let dataset = input.getAttribute("dataset");
-        let fieldName = input.getAttribute("data-field-name");
-        let datatype = input.getAttribute("data-field-type");
-        let value = input.value.trim();
-        console.log(value);
-        console.log(fieldName);
-        console.log(dataset);
-        console.log(datatype);
-        if (value) {
-            filterInfo.filters.push({
-                field: fieldName,
-                dataset: dataset,
-                type: datatype,
-                operator: '',
-                value: '',
-                values: [value]
-            });
-        }
-    });
-
-    var allObjects = document.querySelectorAll('[tagname]');
     allObjects.forEach(element => {
-        if (filterInfo.filters.length === 0)
-            return;
-        if (element.getAttribute("dataset") === filterInfo.filters[0].dataset) {
-            var jsonFilter = JSON.parse(element.getAttribute("filter"));
-            filterInfo.filters.forEach(filter => {
-                var found = false;
-                if (jsonFilter) {
-                    if (!jsonFilter.filters)
-                        jsonFilter.filters = [];
-                    jsonFilter.filters.forEach(item => {
-                        if (item.field === filter.field) {
-                            item.values = filter.values;
-                            found = true;
-                        }
-                    });
-                    if (!found) {
-                        jsonFilter.filters.push(filter);
-                    }
-                    element.setAttribute("filter", JSON.stringify(jsonFilter));
-                } else {
-                    jsonFilter = { view: "standard", filters: [] };
-                    jsonFilter.filters.push(filter);
-                    element.setAttribute("filter", JSON.stringify(jsonFilter));
-                }
-            });
+        console.log(element);
+        // get tagname
+        try
+        {
+                let tagName = element.getAttribute("tagname");
+                // check if the tagname is grid, map, chart, panel
+                if (tagName === "grid" 
+                    || tagName === "map" 
+                    || tagName === "LineChart" 
+                    || tagName === "BarChart"
+                    || tagName === "PieChart"
+                    || tagName === "DonutChart"
+                    || tagName === "RadarChart"
+                    || tagName === "PolarAreaChart"
+                    || tagName === "BubbleChart"
+                    || tagName === "ScatterChart"            
+                    || tagName === "panel") {
+                    // get the filter
+                        let elementFilter = JSON.parse(element.getAttribute("filter")) || { view: "standard", filters: [] };
 
-            switch (element.getAttribute("tagname")) {
-                case "grid":
-                    updateGridData(element);
-                    break;
-                case "BarChart":
-                case "LineChart":
-                case "PieChart":
-                case "DonutChart":
-                case "RadarChart":
-                case "PolarAreaChart":
-                case "BubbleChart":
-                case "ScatterChart":
-                    addLog("renderChart");
-                    chartManager.renderData(element);
-                    break;
-                default:
-                    break;
+                        searchInputs.forEach(input => {
+                            let dataset = input.getAttribute("dataset");
+                            let linkFieldName = input.getAttribute("data-field-name");
+                            let datatype = input.getAttribute("data-field-type");
+                            let row = JSON.parse(input.getAttribute("filter"));
+                            let linkFieldValue = input.value.trim();
+
+                            if (row) {
+                                let linkFieldName = Object.keys(row)[0];
+                                let linkFieldValue = row[linkFieldName];
+                            }
+
+                            if (linkFieldValue) {
+                                let found = false;
+
+                                if (!elementFilter.filters)
+                                    elementFilter.filters = [];
+
+                                elementFilter.filters.forEach(item => {
+                                    if (item.field === linkFieldName) {
+                                        item.values = [linkFieldValue];
+                                        found = true;
+                                    }
+                                });
+
+                                if (!found) {
+                                    elementFilter.filters.push({ field: linkFieldName, values: [linkFieldValue] });
+                                }
+
+                                element.setAttribute("filter", JSON.stringify(elementFilter));
+                            } else {
+                                // Remove the filter
+                                console.log("remove the filter");
+
+                                if (elementFilter.filters) {
+                                    elementFilter.filters.forEach(item => {
+                                        if (item.field === linkFieldName) {
+                                            elementFilter.filters.splice(elementFilter.filters.indexOf(item), 1);
+                                        }
+                                    });
+                                    element.setAttribute("filter", JSON.stringify(elementFilter));
+                                }
+                            }
+                        });
+
+                        // Update element based on its tagname
+                        switch (element.getAttribute("tagname")) {
+                            case "grid":
+                                updateGridData(element);
+                                break;
+                            case "BarChart":
+                            case "LineChart":
+                            case "PieChart":
+                            case "DonutChart":
+                            case "RadarChart":
+                            case "PolarAreaChart":
+                            case "BubbleChart":
+                            case "ScatterChart":
+                                chartManager.renderData(element);
+                                break;
+                            case "Map":
+                                updateMapData(element);
+                                break;  
+                            case "panel":
+                                updatePanelData(element);
+                                break;
+                            default:
+                                break;
+                        }
+                    }// end of if tagname
+            }   
+            catch(err)
+            {
+                console.log(err);
             }
-        }
     });
 }
 
@@ -167,8 +194,32 @@ function searchAutoComplete(event, element) {
 
     const autocomplete = element.parentElement.querySelector('.autocomplete-results');
     const searchValue = element.value.trim();
-
-    let url = `/getDatasetDataDistinct/${dataset}/${fieldName}`;
+    // check if metaschema is not empty
+    try
+    {
+        if (metadata.linkssourceTableName.length === 0) {
+            showToast("No dataset found", 5000);
+            return;
+        }
+    }
+    catch(err)
+    {
+        loadSchema(false);
+        
+    }   
+    // get the source table name from metadata links
+    links = metadata.links;
+    var datasetFileds = [];
+    datasetFileds.push(fieldName);
+    links.forEach(link => {
+        
+        if (link.sourceTableName === dataset) {
+           // adding the fields to the datasetFields is not existing
+            if (!datasetFileds.includes(link.sourceFieldName))
+            datasetFileds.push(link.sourceFieldName);
+        }
+    });
+    let url = `/getDatasetDataNoDuplication/${dataset}?fields=${datasetFileds.join(",")}`;
     if (searchValue.length > 3) {
         switch (datatype) {
             case "character":
@@ -208,10 +259,20 @@ function searchAutoComplete(event, element) {
                 rowDiv.setAttribute("data-field-type", datatype);
                 rowDiv.addEventListener("click", function(event) {
                     event.preventDefault();
-                    element.value = row;
+                    element.value = row[fieldName];
+                    // create the linked filter
+                    link={};
+                    // for each key in the row get the value
+                    for (const key in row) {
+                        if (key !== fieldName && key !== "_id") {
+                            link[key] = row[key];
+                        }
+                    }
+
+                    element.setAttribute("filter", JSON.stringify(link));
                     autocomplete.style.display = "none";
                 });
-                rowDiv.innerHTML = row;
+                rowDiv.innerHTML = row[fieldName];
                 autocomplete.appendChild(rowDiv);
             });
         })
