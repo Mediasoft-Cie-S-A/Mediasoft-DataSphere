@@ -100,6 +100,26 @@
         "styles": "chart.css",
         "image": "img/grid.png"
     },
+    "panel": {
+        "type": "panel",
+        "description": "Panel",
+        "category": "Data",
+        "scriptName": "panel.js",
+        "createFunction": "createElementPanel",
+        "editFunction": "editElementPanel",
+        "styles": "panel.css",
+        "image": "img/panel.png"
+    },
+    "maps": {
+        "type": "maps",
+        "description": "Maps",
+        "category": "Data",
+        "scriptName": "maps.js",
+        "createFunction": "createMapPanel",
+        "editFunction": "editMapPanel",
+        "styles": "maps.css",
+        "image": "img/maps.png"
+    },
     "htmlgrid": {
         "type": "htmlgrid",
         "description": "HTML Grid",

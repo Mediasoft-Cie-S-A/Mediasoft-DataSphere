@@ -1,0 +1,46 @@
+.panel{
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+
+}
+.panel:hover{
+    box-shadow: 0 0 10px 0 rgba(0,0,0,0.1);
+    border-bottom: #4d61fc 5px solid;
+}
+
+.control-panel{
+    border-radius: 10px 10px 0 0;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    padding: 20px;
+    border-bottom: #ccc 1px solid;
+}
+
+.control-panel label{
+    font-weight: bold;
+}
+.control-panel select{
+    width: 100px;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    margin-top: 5px;
+}
+
+.control-panel select:hover{
+    border-bottom: 5px solid #4d61fc;
+}
+
+.panel-header{
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    padding: 10px;
+    margin-bottom: 20px;
+}
+
+.panel-content{
+    padding: 20px;
+}

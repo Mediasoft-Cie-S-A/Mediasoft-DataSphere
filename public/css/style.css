@@ -1153,14 +1153,70 @@ button {
     flex-wrap: wrap;
     gap: 5px;
     margin-bottom: 5px;
+    padding: 5px;
 }
 
 .selected-item {
     padding: 10px;
     background-color: #e0e0e0;
     border-radius: 4px;
+    margin-top: 10px;
+    box-shadow: 0 2px 4px 0 rgba(0,0,0,0.2), 0 2px 5px 0 rgba(0,0,0,0.19)   ;
+
 }
 
+select {
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    border-left: 3px solid #4d61fc;
+    border-right: 3px solid #4d61fc;
+}
+
+select:hover {
+    background-color: #f0f0f0;
+}
+
+ select:focus {
+    background-color: #f0f0f0;
+}   
+
+select option {
+    padding: 5px;
+}
+.selected-item button {
+    padding: 5px;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.selected-item button:hover {
+    background-color: #f44336;
+}
+
+.selected-item button:focus {
+    background-color: #f44336;
+}
+
+.selected-item button:active {
+    background-color: #f44336;
+}
+
+.selected-item button:disabled {
+    background-color: #f44336;
+}
+
+.selected-item button:disabled:hover {
+    background-color: #f44336;
+}
+.selected-item span {
+    margin-right: 10px;
+    color: #333 !important;
+
+}
 .options-container {
     position: absolute;
     top: 100%;

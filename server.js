@@ -49,7 +49,15 @@ const url = app.config.mongoDbUrl;
 const dbName = app.config.mongoDbName;
 const port =app.config.port;
 // Create a new MongoClient
-const client = new MongoClient(url, { useUnifiedTopology: true });
+const client = new MongoClient(url, { useUnifiedTopology: true,  maxPoolSize: 50, 
+    wtimeoutMS: 2500,
+    useNewUrlParser: true });
+// Use connect method to connect to the Server
+client.connect().then(() => {
+    console.log('Connected successfully to server');
+}).catch(err => {
+    console.error('Error connecting to MongoDB:', err);
+});
 require('./mongodb')(app,client,dbName);
 
 app.use(express.urlencoded({extended: false}))
@@ -72,7 +80,7 @@ const dbs= new dblayer(app,session, passport);
 dbs.init();
 
 dbs.generateRoutes(app,dbs);
-require('./formService')(app, client, dbs,dbName);
+require('./apiServices')(app, client, dbs,dbName);
 // Swagger definition
 const swaggerDefinition = {
     openapi: '3.0.0',
@@ -118,3 +126,5 @@ app.get('/elementsConfig', (req, res) => {
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
+
+

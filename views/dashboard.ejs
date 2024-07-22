@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css">
     <!--icons fas-->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -198,25 +198,18 @@
                                             <div id="SchemaBar" class="col table-bordered">
                                                 <div id="SchemaBarBody">
                                                     <div style="display: flex;flex-direction: row; flex-wrap: wrap; vertical-align:bottom;padding: 10px;">
-                                                        <div>                                                            
-                                                            
-                                                            <label style="display: inline-block">Dataset Name: </label>
-                                                            <input type="text" list="DatasetList" id="DatasetName" style="width: 300px;display: inline-block" value="" placeholder="Search or insert DatasetName" onchange="loadDatasetSchemaDiagram(this.value)">
-                                                            <datalist id="DatasetList" style="width: 400px;"></datalist>
-                                                        </div>
-                                                        <div><button onclick="executeSchema(event)" style="display: inline-block">Run</button></div>
+                                                        
+                                                        <div><button onclick="loadSchema(event)" style="display: inline-block">Load</button></div>
                                                         <div><button onclick="saveSchema(event)" style="display: inline-block">Save</button></div>
                                                     </div>
                                                     <div id="SchemaBarBodyBody">
-                                                        <textarea id="SchemaBarBodyBodyTextArea"></textarea>
+                                                        <textarea id="SchemaBarBodyBodyTextArea" style="width: 100%;"></textarea>
                                                     </div>
                                                     <div id="SchemaBarBodyFooter">
                                                     </div>
                                                 </div>
                                                 <!-- zoom slider-->
-                                                <div id="SchemaResultTable" class="col table-bordered" style="overflow: auto; max-height: 400px;">
-                                                    Result Table
-                                                </div>
+                                                
                                             </div>
                                         </td>
                                         
@@ -453,6 +446,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.58.3/addon/fold/indent-fold.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.58.3/addon/fold/markdown-fold.min.js"></script>
     <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   
     <script src="js/db.js"></script>
     <script src="js/loadComponents.js"></script>
@@ -461,6 +455,8 @@
     <script src="js/formSubmit.js"></script>
     <script src="js/diagram.js"></script>
     <script src="js/sql.js"></script>
+    <script src="js/schema.js"></script>
+    <script src="js/properties.js"></script>
     <script src="js/msMultiFilterInput.js"></script>
 </body>
 </html>

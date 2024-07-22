@@ -56,6 +56,7 @@ class ChartManager {
 
         main.setAttribute("chartNumber", this.chartList.length - 1);
         main.setAttribute("dataConfig", JSON.stringify([]));
+        main.setAttribute("pivotConfig", JSON.stringify([]));
         main.setAttribute("filter", JSON.stringify({ view: "standard", filters: [] }));
 
         return main;
@@ -84,15 +85,21 @@ class ChartManager {
         content.appendChild(button);
         console.log("element", element);
         const data = createMultiSelectItem("Data", "data", "data", element.getAttribute('data'), "text", true);
+        const pivot = createMultiSelectItem("Pivot", "pivot", "pivot", element.getAttribute('pivot'), "text");
         const legend = createSelectItem("Legend", "legend", "legend", element.getAttribute('legend'), "text", true);
         const filter = createFilterBox(content);
         content.appendChild(data);
+        content.appendChild(pivot);
         content.appendChild(legend);
         content.appendChild(filter);
 
         const dataConfig = JSON.parse(element.getAttribute("dataConfig"));
+          const pivotConfig = JSON.parse(element.getAttribute("pivotConfig"));
         if (dataConfig){
             dataConfig.forEach(config => addFieldToPropertiesBar(data, config));
+        }
+        if (pivotConfig) {
+            pivotConfig.forEach(config => addFieldToPropertiesBar(pivot, config));
         }
         const legendInput = legend.querySelector('input');
         legendInput.value = element.getAttribute("labels-data-field");
@@ -134,9 +141,31 @@ class ChartManager {
         var functionName = dataConfig[0].functionName;
         // generate colors for each dataset
         var colorCount = -1;
-        dataConfig.forEach((config, index) => {
-           
-            const fieldName = config.fieldName;
+        const fieldsChart=[];
+        const data = this.dataset;
+        if (pivotConfig.length > 0 && data.length > 1) {
+           // get filed names from data[0]
+            
+            const keys = Object.keys(data[0]);
+            keys.forEach(key => {
+                // if the key is not ind dataConfig.fieldname, add it to fieldsChart
+                if (!dataConfig.find(x => x.fieldName === key)) {
+                    fieldsChart.push(key);
+                }
+            });
+
+        }else
+        {
+            dataConfig.forEach((config, index) => {
+                fieldsChart.push(config.fieldName);
+            });
+        }
+        console.log("fieldsChart",fieldsChart);
+
+        fieldsChart.forEach((fieldName,index) => {
+            console.log("fieldName",fieldName);
+            console.log("index",index);
+            //const fieldName = config.fieldName;
             if (fieldName === labelName) return;
             if (chart.config.type === 'treemap') {
                 chart.data.datasets[index] = {
@@ -171,7 +200,7 @@ class ChartManager {
                 fieldsElaborated.push(fieldName);
             }
         });
-
+      
         // Get the dataset data from the server, using the filter
         var url = this.getFilterUrl(element)+"&agg="+labelName;
 
@@ -183,28 +212,50 @@ class ChartManager {
         const limit = JSON.parse(element.getAttribute("limit"));
         console.log("filter:" + filter);
         if (filter !== null && filter !== undefined && filter !== "undefined") {
-            const body = { columns: dataConfig, pivot: pivotConfig, view: "standard", filters: filter, sort: sort, limit: limit};
+            const body = { 
+                    columns: dataConfig, 
+                    pivot: pivotConfig, 
+                    view: "standard", 
+                    filters: filter, 
+                    sort: sort, 
+                    limit: limit,
+                    links: metadata.links
+                };
             request.send(JSON.stringify(body));
         } else {
             console.log("No filter");
-            const body = { columns: dataConfig, pivot: pivotConfig, view: "standard", filters: [], sort: sort, limit: limit};
+            const body = { 
+                columns: dataConfig, 
+                pivot: pivotConfig, 
+                view: "standard", 
+                filters: [], 
+                sort: sort, 
+                limit: limit,
+                links: metadata.links};
             request.send(JSON.stringify(body));
         }
-
+   
         if (request.status === 200) {
             const data = JSON.parse(request.responseText);
             this.dataset = data; // Store the dataset for sorting and limiting
-
-            for (let index = 0; index < dataConfig.length; index++) {
-                if (dataConfig[index].fieldName !== labelName) {
+            // set limit to data.length
+            var limitValue= element.querySelector('#limitInput');
+            if (limitValue) {
+                limitValue.value = data.length;
+            }
+            
+            
+            
+            for (let index = 0; index < fieldsChart.length; index++) {
+                if (fieldsChart[index] !== labelName) {
                     if (chart.config.type === 'treemap') {
                         chart.data.datasets[index].tree = data.map(item => ({
                             x: item[labelName],
-                            value: item[dataConfig[index].fieldName],
+                            value: item[fieldsChart[index]],
                             label: item[labelName]
                         }));
                     } else {
-                        chart.data.datasets[index].data = data.map(item => item[dataConfig[index].fieldName]);
+                        chart.data.datasets[index].data = data.map(item => item[fieldsChart[index]]);
                         chart.data.labels = data.map(item => functionName === 'value' ? item[labelName] : item['_id']);
                     }
                 }
@@ -240,7 +291,7 @@ class ChartManager {
         currentChart.setAttribute("labels-data-function", legendfunction);
         currentChart.setAttribute("labels-data-type", legendType);
         currentChart.setAttribute("dataset", dataset);
-
+        var pivotInput = propertiesBar.querySelector('#Pivot');
         const dataSelect = dataInput.querySelectorAll('div');
         const dataConfig = [];
         dataSelect.forEach(item => {
@@ -252,6 +303,20 @@ class ChartManager {
             dataConfig.push({ fieldName: fieldName, functionName: functionName, dataType: dataType, dataset: dataset });
         });
         currentChart.setAttribute("dataConfig", JSON.stringify(dataConfig));
+
+          // Generate array of pivot
+    var pivotSelect = pivotInput.querySelectorAll('div');
+    var pivotConfig = [];
+    pivotSelect.forEach(item => {
+        var selectFunction = item.querySelector('select');
+        var functionName = selectFunction[selectFunction.selectedIndex].value;
+        var fieldName = item.querySelector('span').getAttribute('data-field-name');
+        var dataType = item.querySelector('span').getAttribute('data-type');
+        var dataset = item.querySelector('span').getAttribute('dataset');
+        currentChart.setAttribute("dataset", dataset);
+        pivotConfig.push({ fieldName: fieldName, functionName: functionName, dataType: dataType, dataset: dataset });
+    });
+    currentChart.setAttribute("pivotConfig", JSON.stringify(pivotConfig));
 
         this.renderData(currentChart);
     }
